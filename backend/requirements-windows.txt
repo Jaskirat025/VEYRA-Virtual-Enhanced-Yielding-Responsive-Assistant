@@ -1,0 +1,18 @@
+# Windows-only integration, speech and plotting dependencies.
+-r requirements.txt
+
+pycaw>=20240210
+comtypes>=1.2
+pywin32>=306
+pyautogui>=0.9.54
+pywinauto>=0.6.9
+mss>=9.0,<11
+Pillow>=10,<12
+matplotlib>=3.8,<4
+sounddevice>=0.4.6,<1
+faster-whisper>=1.0,<2
+openwakeword>=0.6,<1
+pyttsx3>=2.90,<3
+google-api-python-client>=2.130,<3
+google-auth>=2.29,<3
+google-auth-oauthlib>=1.2,<2

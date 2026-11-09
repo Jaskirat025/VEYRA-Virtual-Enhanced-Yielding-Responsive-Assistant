@@ -1,0 +1,12 @@
+# Core runtime dependencies (cross-platform, import-safe).
+fastapi>=0.115,<1
+uvicorn>=0.30,<1
+pydantic>=2.7,<3
+httpx>=0.27,<1
+python-dotenv>=1.0,<2
+keyring>=25.2,<26
+psutil>=5.9,<7
+pyperclip>=1.9,<2
+Send2Trash>=1.8,<2
+sympy>=1.12,<2
+numpy>=1.26,<3

@@ -218,3 +218,75 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# ===========================================================================
+# VEYRA
+# ===========================================================================
+
+# Secrets and local environment
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+credentials/
+
+# User data, databases and logs (never committed)
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+data/
+logs/
+*.log
+
+# Downloaded or generated models and voice assets
+models/
+voices/
+*.gguf
+*.onnx
+*.pt
+*.pth
+*.safetensors
+
+# Python virtual environments
+.venv/
+venv/
+
+# Node / interface
+node_modules/
+ui/dist/
+ui/.vite/
+npm-debug.log*
+pnpm-debug.log*
+yarn-error.log*
+
+# Rust / Tauri
+src-tauri/target/
+src-tauri/gen/
+
+# Packaged backend sidecar
+dist-backend/
+build/pyinstaller/
+
+# Local Rust toolchain installed by contributors
+.cargo/
+.rustup/
+
+# Build output and installers
+*.msi
+*.exe
+*.dll
+*.nsis
+
+# Editors
+.vscode/
+.idea/
+
+# OS metadata
+Thumbs.db
+desktop.ini
+.DS_Store

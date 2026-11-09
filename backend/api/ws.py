@@ -1,0 +1,210 @@
+"""WebSocket session: one live connection between the UI and the agent."""
+
+from __future__ import annotations
+
+import asyncio
+import contextlib
+import logging
+from typing import Any
+
+from fastapi import WebSocket, WebSocketDisconnect
+
+from backend.audio.recorder import AudioUnavailable
+from backend.audio.voice import listen_once
+from backend.brain.agent import Agent, ConfirmBroker
+from backend.brain.llm import LLMError
+from backend.config import SettingsStore
+from backend.memory.db import Database
+
+logger = logging.getLogger(__name__)
+
+
+class Session:
+    def __init__(
+        self,
+        websocket: WebSocket,
+        settings_store: SettingsStore,
+        db: Database,
+        broker: ConfirmBroker,
+    ) -> None:
+        self.websocket = websocket
+        self.settings_store = settings_store
+        self.db = db
+        self.broker = broker
+        self._send_lock = asyncio.Lock()
+        self._task: asyncio.Task | None = None
+        self.conversation_id: str = ""
+
+    async def emit(self, event: dict[str, Any]) -> None:
+        async with self._send_lock:
+            # The window can close at any moment; a failed send is expected.
+            with contextlib.suppress(Exception):
+                await self.websocket.send_json(event)
+
+    async def run(self) -> None:
+        await self.websocket.accept()
+        settings = self.settings_store.load()
+        await self.emit(
+            {
+                "type": "ready",
+                "data": {
+                    "model": settings.models.local_model,
+                    "assistant_name": settings.assistant_name,
+                    "language": settings.interface.language,
+                    "low_power": settings.interface.low_power,
+                },
+            }
+        )
+        await self.emit({"type": "state", "state": "idle", "detail": ""})
+
+        timer_task = asyncio.create_task(self._timer_watch())
+        try:
+            while True:
+                payload = await self.websocket.receive_json()
+                await self._handle(payload)
+        except WebSocketDisconnect:
+            pass
+        except Exception:
+            logger.exception("WebSocket session ended unexpectedly")
+        finally:
+            timer_task.cancel()
+            self.broker.cancel_all()
+
+    async def _handle(self, payload: dict[str, Any]) -> None:
+        if not isinstance(payload, dict):
+            return
+        kind = payload.get("type")
+
+        if kind == "user_text":
+            text = str(payload.get("text", "")).strip()
+            if not text:
+                return
+            if self._task and not self._task.done():
+                await self.emit(
+                    {"type": "error", "message": "Still working on the previous request."}
+                )
+                return
+            self._task = asyncio.create_task(self._run_agent(text))
+            return
+
+        if kind == "confirm_response":
+            request_id = str(payload.get("request_id", ""))
+            approved = bool(payload.get("approved", False))
+            if not self.broker.resolve(request_id, approved):
+                await self.emit({"type": "error", "message": "That confirmation already expired."})
+            return
+
+        if kind == "cancel":
+            if self._task and not self._task.done():
+                self._task.cancel()
+            self.broker.cancel_all()
+            await self.emit({"type": "state", "state": "idle", "detail": "cancelled"})
+            return
+
+        if kind == "ping":
+            await self.emit({"type": "pong"})
+            return
+
+        if kind == "start_listening":
+            if self._task and not self._task.done():
+                return
+            self._task = asyncio.create_task(self._listen())
+            return
+
+        await self.emit({"type": "error", "message": f"Unknown message type: {kind}"})
+
+    async def _run_agent(self, text: str) -> None:
+        settings = self.settings_store.load()
+        self.conversation_id = self.db.ensure_conversation(
+            self.conversation_id or None, title=text[:60]
+        )
+        self.db.add_message(self.conversation_id, "user", text)
+        await self.emit(
+            {
+                "type": "transcript",
+                "data": {
+                    "role": "user",
+                    "text": text,
+                    "conversation_id": self.conversation_id,
+                },
+            }
+        )
+
+        history = self.db.recent_messages(self.conversation_id, limit=12)[:-1]
+        agent = Agent(settings, self.db, self.emit, self.broker)
+
+        try:
+            result = await agent.run(text, self.conversation_id, history)
+        except LLMError as exc:
+            await self.emit({"type": "state", "state": "error", "detail": str(exc)})
+            await self.emit({"type": "error", "message": str(exc)})
+            return
+        except asyncio.CancelledError:
+            await self.emit({"type": "state", "state": "idle", "detail": "cancelled"})
+            return
+        except Exception:
+            logger.exception("Agent run failed")
+            await self.emit(
+                {"type": "error", "message": "Something went wrong while thinking. Try again."}
+            )
+            return
+
+        self.db.add_message(self.conversation_id, "assistant", result.text)
+        await self.emit(
+            {
+                "type": "transcript",
+                "data": {
+                    "role": "assistant",
+                    "text": result.text,
+                    "conversation_id": self.conversation_id,
+                    "used_online": result.used_online,
+                },
+            }
+        )
+        await self.emit({"type": "state", "state": "idle", "detail": ""})
+        if settings.voice.speak_replies:
+            await self.emit({"type": "speak", "data": {"text": result.text}})
+
+    async def _listen(self) -> None:
+        settings = self.settings_store.load()
+        loop = asyncio.get_running_loop()
+
+        def level(value: float) -> None:
+            asyncio.run_coroutine_threadsafe(
+                self.emit(
+                    {
+                        "type": "audio_level",
+                        "data": {"source": "mic", "level": min(1.0, value / 8000.0)},
+                    }
+                ),
+                loop,
+            )
+
+        await self.emit({"type": "state", "state": "listening", "detail": ""})
+        try:
+            text = await asyncio.to_thread(listen_once, settings, None, level)
+        except (AudioUnavailable, Exception) as exc:
+            await self.emit({"type": "state", "state": "idle", "detail": ""})
+            await self.emit({"type": "error", "message": f"Listening failed: {exc}"})
+            return
+
+        await self.emit({"type": "state", "state": "idle", "detail": ""})
+        await self._run_agent(text)
+
+    async def _timer_watch(self) -> None:
+        try:
+            while True:
+                await asyncio.sleep(15)
+                for timer in self.db.due_timers():
+                    self.db.complete_timer(int(timer["id"]))
+                    await self.emit(
+                        {
+                            "type": "timer_due",
+                            "data": {"label": timer["label"], "id": timer["id"]},
+                        }
+                    )
+        except asyncio.CancelledError:
+            return
+        except Exception:
+            logger.exception("Timer watcher stopped")
+            return

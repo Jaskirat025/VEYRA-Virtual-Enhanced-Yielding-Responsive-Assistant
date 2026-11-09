@@ -1,0 +1,7 @@
+{
+  "bundle": {
+    "resources": {
+      "../dist-backend/veyra-backend.exe": "veyra-backend.exe"
+    }
+  }
+}

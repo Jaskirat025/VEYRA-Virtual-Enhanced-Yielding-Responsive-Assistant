@@ -1,0 +1,143 @@
+import { useState } from "react";
+import { Orb } from "../components/Orb";
+import { Waveform } from "../components/Waveform";
+import { useVeyra } from "../lib/useVeyra";
+import { useI18n } from "../i18n";
+
+export function HomeScreen() {
+  const {
+    orbState,
+    level,
+    settings,
+    messages,
+    send,
+    listen,
+    cancel,
+    connected,
+    error,
+  } = useVeyra();
+  const { t } = useI18n();
+  const [text, setText] = useState("");
+
+  const busy = orbState === "thinking" || orbState === "listening" || orbState === "speaking";
+  const active = orbState === "listening" || orbState === "speaking";
+  const lastUser = [...messages].reverse().find((message) => message.role === "user");
+  const lastAssistant = [...messages].reverse().find((message) => message.role === "assistant");
+
+  const submit = () => {
+    if (!text.trim() || !connected) return;
+    send(text);
+    setText("");
+  };
+
+  return (
+    <div className="flex h-full flex-col items-center justify-between gap-6 px-6 py-8">
+      <div className="flex w-full max-w-content flex-1 flex-col items-center justify-center gap-4">
+        <span className="vy-label">{t(`state.${orbState}`)}</span>
+
+        <div className="relative flex items-center justify-center">
+          <Orb
+            state={orbState}
+            level={level}
+            lowPower={settings?.interface.low_power ?? false}
+            size={300}
+          />
+        </div>
+
+        <Waveform level={level} active={active} />
+
+        <div className="mt-2 min-h-[92px] w-full max-w-xl text-center">
+          {lastUser && (
+            <p className="mb-1 font-mono text-[11px] uppercase tracking-[0.14em] text-silver-500">
+              {t("chat.you")}
+            </p>
+          )}
+          {lastUser && (
+            <p className="mb-3 line-clamp-2 text-sm text-silver-400">{lastUser.text}</p>
+          )}
+          {lastAssistant ? (
+            <p className="text-base leading-relaxed text-silver-100">{lastAssistant.text}</p>
+          ) : (
+            !lastUser && (
+              <p className="mx-auto max-w-md text-sm leading-relaxed text-silver-400">
+                {t("home.hint")}
+              </p>
+            )
+          )}
+        </div>
+
+        {error && (
+          <p
+            className="max-w-lg border-l-2 px-3 py-1 text-center text-xs text-silver-300"
+            style={{ borderColor: "var(--vy-accent-500)" }}
+          >
+            {error}
+          </p>
+        )}
+      </div>
+
+      <div className="w-full max-w-2xl">
+        <div className="mb-3 flex flex-wrap justify-center gap-2">
+          {["home.chip.calc", "home.chip.open", "home.chip.note"].map((key) => (
+            <button
+              key={key}
+              type="button"
+              className="vy-chip"
+              onClick={() => setText(t(key))}
+            >
+              {t(key)}
+            </button>
+          ))}
+        </div>
+
+        <form
+          className="vy-panel flex items-end gap-2 p-2"
+          onSubmit={(event) => {
+            event.preventDefault();
+            submit();
+          }}
+        >
+          <button
+            type="button"
+            aria-label={t("home.listen")}
+            title={t("home.listen")}
+            disabled={!connected || busy}
+            onClick={() => (busy ? cancel() : listen())}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md transition-colors disabled:opacity-40"
+            style={{
+              color: busy ? "var(--vy-accent-500)" : "var(--vy-silver-300)",
+              boxShadow: busy ? "inset 0 0 0 1px var(--vy-accent-500)" : "none",
+            }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <rect x="9" y="3" width="6" height="11" rx="3" stroke="currentColor" strokeWidth="1.4" />
+              <path d="M5 11a7 7 0 0 0 14 0M12 18v3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+            </svg>
+          </button>
+
+          <input
+            value={text}
+            onChange={(event) => setText(event.target.value)}
+            placeholder={connected ? t("home.placeholder") : t("common.offlineHint")}
+            aria-label={t("home.placeholder")}
+            disabled={!connected}
+            className="min-h-10 flex-1 bg-transparent px-2 text-sm text-silver-100 outline-none placeholder:text-silver-500 disabled:opacity-60"
+          />
+
+          <button
+            type="submit"
+            disabled={!text.trim() || !connected}
+            className="vy-btn vy-btn-primary h-10 shrink-0 px-5"
+          >
+            {t("home.send")}
+          </button>
+        </form>
+
+        <p className="mt-2 text-center font-mono text-[10px] uppercase tracking-[0.14em] text-silver-500">
+          {settings?.models.local_model ?? "qwen3:4b"} ·{" "}
+          {settings?.interface.low_power ? t("status.lowPower") : "HUD"}
+        </p>
+      </div>
+    </div>
+  );
+}

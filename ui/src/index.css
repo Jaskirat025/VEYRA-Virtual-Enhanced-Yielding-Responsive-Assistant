@@ -1,0 +1,196 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* 60% gunmetal */
+  --vy-gunmetal-700: #2a3439;
+  --vy-gunmetal-800: #1e262a;
+  --vy-gunmetal-900: #161c1f;
+
+  /* 30% fog silver */
+  --vy-silver-100: #e4e8eb;
+  --vy-silver-300: #c5cbd0;
+  --vy-silver-400: #9aa3aa;
+  --vy-silver-500: #8b949b;
+
+  /* 10% molten orange */
+  --vy-accent-500: #ff5a1f;
+  --vy-accent-600: #e64a12;
+  --vy-accent-soft: rgba(255, 90, 31, 0.12);
+  --vy-ink-on-accent: #161c1f;
+
+  /* lines, glows, geometry, motion */
+  --vy-line: rgba(197, 203, 208, 0.14);
+  --vy-line-strong: rgba(197, 203, 208, 0.28);
+  --vy-glow-accent: 0 0 24px rgba(255, 90, 31, 0.35);
+  --vy-font-display: "Rajdhani", "Segoe UI", sans-serif;
+  --vy-font-body: "Inter", "Segoe UI", "Microsoft YaHei UI", sans-serif;
+  --vy-font-mono: "JetBrains Mono", "Cascadia Mono", monospace;
+  --vy-radius-panel: 10px;
+  --vy-cut: 14px;
+  --vy-dur-fast: 150ms;
+  --vy-dur-base: 220ms;
+  --vy-dur-slow: 300ms;
+  --vy-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --vy-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --vy-inset-top: inset 0 1px 0 rgba(228, 232, 235, 0.06);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background-color: var(--vy-gunmetal-700);
+  color: var(--vy-silver-100);
+  font-family: var(--vy-font-body);
+  overflow: hidden;
+}
+
+::selection {
+  background: var(--vy-accent-500);
+  color: var(--vy-ink-on-accent);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--vy-gunmetal-900);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--vy-line-strong);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--vy-silver-500);
+}
+
+:focus-visible {
+  outline: 2px solid var(--vy-accent-500);
+  outline-offset: 2px;
+}
+
+@layer components {
+  .vy-panel {
+    background:
+      linear-gradient(180deg, rgba(197, 203, 208, 0.05), transparent 38%),
+      var(--vy-gunmetal-800);
+    box-shadow:
+      inset 0 0 0 1px var(--vy-line),
+      inset 0 1px 0 rgba(228, 232, 235, 0.05),
+      0 12px 32px rgba(0, 0, 0, 0.35);
+    clip-path: polygon(
+      0 0,
+      calc(100% - var(--vy-cut)) 0,
+      100% var(--vy-cut),
+      100% 100%,
+      var(--vy-cut) 100%,
+      0 calc(100% - var(--vy-cut))
+    );
+  }
+
+  .vy-panel-flat {
+    background: var(--vy-gunmetal-800);
+    box-shadow: inset 0 0 0 1px var(--vy-line);
+    border-radius: var(--vy-radius-panel);
+  }
+
+  .vy-label {
+    font-family: var(--vy-font-display);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--vy-silver-400);
+  }
+
+  .vy-grid {
+    background-image:
+      linear-gradient(to right, rgba(197, 203, 208, 0.04) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(197, 203, 208, 0.04) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+
+  .vy-grain::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.035;
+    background-image: radial-gradient(rgba(255, 255, 255, 0.9) 0.5px, transparent 0.5px);
+    background-size: 4px 4px;
+  }
+
+  .vy-btn {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium transition-all;
+    border-radius: 6px;
+    color: var(--vy-silver-100);
+    box-shadow: inset 0 0 0 1px var(--vy-line-strong);
+    background: transparent;
+    min-height: 36px;
+  }
+  .vy-btn:hover:not(:disabled) {
+    background: rgba(197, 203, 208, 0.06);
+  }
+  .vy-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .vy-btn-primary {
+    background: var(--vy-accent-500);
+    color: var(--vy-ink-on-accent);
+    box-shadow: none;
+    font-weight: 600;
+  }
+  .vy-btn-primary:hover:not(:disabled) {
+    background: var(--vy-accent-600);
+  }
+
+  .vy-field {
+    @apply w-full px-3 py-2 text-sm transition-colors;
+    border-radius: 6px;
+    background: var(--vy-gunmetal-900);
+    box-shadow: inset 0 0 0 1px var(--vy-line);
+    color: var(--vy-silver-100);
+    min-height: 36px;
+  }
+  .vy-field::placeholder {
+    color: var(--vy-silver-500);
+  }
+  .vy-field:focus {
+    box-shadow: inset 0 0 0 1px var(--vy-accent-500);
+    outline: none;
+  }
+
+  .vy-chip {
+    @apply px-3 py-1.5 text-xs transition-colors;
+    border-radius: 999px;
+    box-shadow: inset 0 0 0 1px var(--vy-line);
+    color: var(--vy-silver-400);
+  }
+  .vy-chip:hover {
+    color: var(--vy-silver-100);
+    box-shadow: inset 0 0 0 1px var(--vy-line-strong);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
