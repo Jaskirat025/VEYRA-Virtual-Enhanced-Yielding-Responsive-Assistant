@@ -92,6 +92,18 @@ def test_gmail_app_password_secret_is_accepted(tmp_path):
     assert "example-app-password" not in response.text
 
 
+def test_custom_api_secret_is_accepted(tmp_path):
+    with make_client(tmp_path) as client:
+        response = client.post(
+            "/api/secrets",
+            headers=headers(),
+            json={"name": "custom_api_exa", "value": "custom-example"},
+        )
+    assert response.status_code == 200
+    assert response.json()["saved"] is True
+    assert "custom-example" not in response.text
+
+
 def test_unknown_secret_name_is_rejected(tmp_path):
     with make_client(tmp_path) as client:
         response = client.post(

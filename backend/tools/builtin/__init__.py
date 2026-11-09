@@ -4,6 +4,7 @@ from backend.tools.builtin import (  # noqa: F401
     calc,
     code,
     communication,
+    custom_api,
     files,
     github,
     google,

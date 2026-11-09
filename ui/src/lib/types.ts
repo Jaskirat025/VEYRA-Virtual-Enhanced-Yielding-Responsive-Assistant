@@ -34,6 +34,19 @@ export interface AudioSettings {
   push_to_talk: boolean;
 }
 
+export interface CustomApiDefinition {
+  id: string;
+  name: string;
+  description: string;
+  base_url: string;
+  path: string;
+  method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+  auth_header: string;
+  auth_prefix: string;
+  headers: Record<string, string>;
+  enabled: boolean;
+}
+
 export interface IntegrationSettings {
   github_login: string;
   github_read_only: boolean;
@@ -59,6 +72,7 @@ export interface Settings {
   integrations: IntegrationSettings;
   interface: InterfaceSettings;
   tool_permissions: Record<string, boolean>;
+  custom_apis: CustomApiDefinition[];
   ram_floor_mb: number;
 }
 

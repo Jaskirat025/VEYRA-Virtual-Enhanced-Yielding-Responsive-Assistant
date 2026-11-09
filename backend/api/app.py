@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 import secrets as py_secrets
 from typing import Any
 
@@ -35,6 +36,8 @@ SECRET_NAMES = (
     "google_token_json",
     "gmail_app_password",
 )
+CUSTOM_API_SECRET_PREFIX = "custom_api_"
+_CUSTOM_API_ID = re.compile(r"[a-z][a-z0-9_-]{1,31}")
 DEV_ORIGINS = [
     "http://localhost:1420",
     "http://127.0.0.1:1420",
@@ -72,6 +75,14 @@ def _token_from_request(request: Request) -> str:
 
 def _check_token(expected: str, provided: str) -> bool:
     return bool(provided) and py_secrets.compare_digest(expected, provided)
+
+
+def _allowed_secret_name(name: str) -> bool:
+    if name in SECRET_NAMES:
+        return True
+    if not name.startswith(CUSTOM_API_SECRET_PREFIX):
+        return False
+    return bool(_CUSTOM_API_ID.fullmatch(name[len(CUSTOM_API_SECRET_PREFIX) :]))
 
 
 def create_app(
@@ -160,14 +171,14 @@ def create_app(
 
     @app.post("/api/secrets")
     async def write_secret(payload: SecretPayload) -> dict[str, Any]:
-        if payload.name not in SECRET_NAMES:
+        if not _allowed_secret_name(payload.name):
             raise HTTPException(status_code=400, detail="unknown secret name")
         set_secret(payload.name, payload.value.strip())
         return {"saved": True, "status": secret_status(SECRET_NAMES)}
 
     @app.delete("/api/secrets/{name}")
     async def remove_secret(name: str) -> dict[str, Any]:
-        if name not in SECRET_NAMES:
+        if not _allowed_secret_name(name):
             raise HTTPException(status_code=400, detail="unknown secret name")
         delete_secret(name)
         return {"deleted": True, "status": secret_status(SECRET_NAMES)}

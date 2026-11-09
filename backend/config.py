@@ -9,8 +9,10 @@ from __future__ import annotations
 import contextlib
 import json
 import os
+import re
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
+from urllib.parse import urlparse
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -54,6 +56,102 @@ class AudioSettings(BaseModel):
     push_to_talk: bool = True
 
 
+class CustomApiSettings(BaseModel):
+    """A user-defined HTTP endpoint exposed to the local model as a tool."""
+
+    id: str = Field(min_length=2, max_length=32, pattern=r"^[a-z][a-z0-9_-]*$")
+    name: str = Field(min_length=1, max_length=64)
+    description: str = Field(default="", max_length=300)
+    base_url: str = Field(min_length=1, max_length=500)
+    path: str = Field(default="", max_length=300)
+    method: Literal["GET", "POST", "PUT", "PATCH", "DELETE"] = "POST"
+    auth_header: str = Field(default="Authorization", max_length=64)
+    auth_prefix: str = Field(default="Bearer ", max_length=40)
+    headers: dict[str, str] = Field(default_factory=dict)
+    enabled: bool = True
+
+    @field_validator("base_url")
+    @classmethod
+    def _check_base_url(cls, value: str) -> str:
+        cleaned = value.strip().rstrip("/")
+        parsed = urlparse(cleaned)
+        if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+            raise ValueError("The custom API base URL must be an http(s) URL.")
+        if parsed.username or parsed.password or parsed.query or parsed.fragment:
+            raise ValueError(
+                "The custom API base URL cannot contain credentials, a query or a fragment."
+            )
+        return cleaned
+
+    @field_validator("path")
+    @classmethod
+    def _check_path(cls, value: str) -> str:
+        cleaned = value.strip()
+        if any(character.isspace() for character in cleaned):
+            raise ValueError("The custom API path cannot contain spaces.")
+        if any(character in cleaned for character in ("?", "#", "\\")) or ".." in cleaned:
+            raise ValueError("The custom API path cannot contain queries, fragments or '..'.")
+        if "://" in cleaned:
+            raise ValueError("The custom API path must be relative.")
+        if cleaned and not cleaned.startswith("/"):
+            cleaned = "/" + cleaned
+        return cleaned
+
+    @field_validator("auth_header")
+    @classmethod
+    def _check_auth_header(cls, value: str) -> str:
+        cleaned = value.strip()
+        if not re.fullmatch(r"[A-Za-z0-9-]{1,64}", cleaned):
+            raise ValueError("The authentication header name is invalid.")
+        if cleaned.lower() in {
+            "host",
+            "content-length",
+            "transfer-encoding",
+            "connection",
+            "cookie",
+        }:
+            raise ValueError("The authentication header cannot be a transport header.")
+        return cleaned
+
+    @field_validator("auth_prefix")
+    @classmethod
+    def _check_auth_prefix(cls, value: str) -> str:
+        if "\n" in value or "\r" in value:
+            raise ValueError("The authentication prefix cannot contain a newline.")
+        return value
+
+    @field_validator("headers")
+    @classmethod
+    def _check_headers(cls, value: dict[str, str]) -> dict[str, str]:
+        if len(value) > 20:
+            raise ValueError("A custom API can define at most 20 headers.")
+        blocked = {
+            "authorization",
+            "api-key",
+            "x-api-key",
+            "x-goog-api-key",
+            "host",
+            "content-length",
+            "transfer-encoding",
+            "connection",
+            "cookie",
+        }
+        cleaned: dict[str, str] = {}
+        for name, header_value in value.items():
+            key = name.strip()
+            if not re.fullmatch(r"[A-Za-z0-9-]{1,64}", key):
+                raise ValueError(f"Invalid custom API header name: {key!r}.")
+            if key.lower() in blocked:
+                raise ValueError(
+                    f"Use the API key fields instead of the {key} header in the definition."
+                )
+            text = str(header_value).strip()
+            if "\n" in text or "\r" in text or len(text) > 500:
+                raise ValueError(f"Invalid value for custom API header {key}.")
+            cleaned[key] = text
+        return cleaned
+
+
 class IntegrationSettings(BaseModel):
     github_login: str = ""
     github_read_only: bool = True
@@ -84,7 +182,18 @@ class AppSettings(BaseModel):
     integrations: IntegrationSettings = Field(default_factory=IntegrationSettings)
     interface: InterfaceSettings = Field(default_factory=InterfaceSettings)
     tool_permissions: dict[str, bool] = Field(default_factory=dict)
+    custom_apis: list[CustomApiSettings] = Field(default_factory=list)
     ram_floor_mb: int = Field(default=900, ge=256, le=4096)
+
+    @field_validator("custom_apis")
+    @classmethod
+    def _check_custom_apis(cls, value: list[CustomApiSettings]) -> list[CustomApiSettings]:
+        if len(value) > 20:
+            raise ValueError("At most 20 custom APIs can be configured.")
+        ids = [api.id for api in value]
+        if len(ids) != len(set(ids)):
+            raise ValueError("Custom API ids must be unique.")
+        return value
 
     def tool_enabled(self, name: str) -> bool:
         """Tools are enabled unless the user explicitly disabled them."""

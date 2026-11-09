@@ -8,6 +8,7 @@ Specifications and guides for VEYRA. Everything here is written in English; user
 | [languages.md](languages.md) | One installer, three languages; i18n layout; what stays English | Implemented |
 | [design-system.md](design-system.md) | Colour tokens, contrast, typography, surfaces, orb states, motion, low-power mode | Phase 4 |
 | [adding-a-tool.md](adding-a-tool.md) | Tool contract, risk levels, schemas, audit log, tests | Phase 2 |
+| [custom-apis.md](custom-apis.md) | Custom REST tools, OpenAI-compatible providers, key storage and safety boundaries | Implemented |
 | [google-oauth.md](google-oauth.md) | Creating your own Google credentials for Gmail and Calendar | Phase 9 |
 
 ## Status

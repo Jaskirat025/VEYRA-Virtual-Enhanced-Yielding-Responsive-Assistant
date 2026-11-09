@@ -46,6 +46,7 @@ EXPECTED_TOOLS = {
     "timer",
     "sveglia",
     "chiedi_chiarimento",
+    "chiama_api",
 }
 
 
@@ -68,6 +69,7 @@ def test_risk_levels_are_declared():
     assert get_tool("chiudi_app").risk is Risk.CONFIRM
     assert get_tool("invia_mail").risk is Risk.CONFIRM
     assert get_tool("esegui_python").risk is Risk.DANGEROUS
+    assert get_tool("chiama_api").risk is Risk.CONFIRM
 
 
 def test_validation_rejects_unknown_and_missing_arguments():

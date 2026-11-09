@@ -32,6 +32,7 @@ class Category(StrEnum):
     GOOGLE = "google"
     MEMORY = "memory"
     COMMUNICATION = "communication"
+    CUSTOM = "custom"
     META = "meta"
 
 

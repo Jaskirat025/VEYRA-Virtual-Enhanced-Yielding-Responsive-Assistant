@@ -35,7 +35,7 @@ Rules:
 - **Return a string.** The executor truncates it to 2000 characters before it reaches the model. Return a short factual result, not a formatted document.
 - **Raise `ToolError`** for expected failures (not found, permission denied, empty input). The message goes back to the model as text and to the tool log. Never raise bare exceptions on purpose; unexpected ones are caught and reported the same way.
 - **Never return raw bytes, file contents over the limit, HTML or ANSI escapes.**
-- **No hidden side effects** beyond the declared purpose, and no network calls in local tools.
+- **No hidden side effects** beyond the declared purpose. Local tools make no network calls; network-backed tools must use the external-data wrapper, a confirmation risk and a timeout.
 
 ## Risk levels
 
@@ -93,9 +93,16 @@ The pre-classifier maps an utterance to one or more categories and only those to
 | `google` | `cerca_mail`, `leggi_mail`, `bozza_mail`, `invia_mail`, `eventi_oggi`, `eventi_range`, `crea_evento` |
 | `memory` | `salva_nota`, `cerca_note`, `timer`, `sveglia` |
 | `communication` | `condividi_whatsapp` |
+| `custom` | `chiama_api` (definition supplied by the user) |
 | `meta` | `chiedi_chiarimento` |
 
 Keyword matching is the default selector; optional lightweight embeddings (`all-MiniLM`, lazy loaded, unloaded after use) improve ambiguous cases. If selection is uncertain, include `chiedi_chiarimento` plus the two most likely categories rather than dumping every tool.
+
+## Custom APIs without code
+
+A REST integration does not need a new Python tool. Add a definition in **Settings → Custom APIs**; the registry exposes the single `chiama_api` tool, and the system prompt lists the configured ids and descriptions. Keys are stored in Credential Manager, every call is `CONFIRM`, and responses are wrapped by `wrap_external`.
+
+Runtime code generation is intentionally not part of this flow. A new protocol that cannot be expressed as a REST definition belongs in a typed built-in tool with tests, not in model-written code loaded at runtime. See [custom-apis.md](custom-apis.md).
 
 ## Agent loop
 
@@ -109,6 +116,7 @@ Keyword matching is the default selector; optional lightweight embeddings (`all-
 
 - Every tool has an on/off switch in Settings → Permissions, grouped by category.
 - Integrations (GitHub, Google) are off until configured; read-only is the default. Gmail can use a local Google app password; Calendar and Gmail drafts still use OAuth.
+- Custom APIs are user-defined JSON, limited to 20 entries, and remain disabled from the model's tool list until the definition is saved and enabled.
 - Disabled tools are removed from the model's tool list, and calling one is an error, never an execution.
 - Per-tool last-used time and error count are visible in the tool log.
 

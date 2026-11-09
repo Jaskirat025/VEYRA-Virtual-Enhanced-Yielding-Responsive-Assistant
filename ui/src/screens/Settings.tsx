@@ -1,12 +1,20 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { apiFetch } from "../lib/api";
-import type { Settings } from "../lib/types";
+import type { CustomApiDefinition, Settings } from "../lib/types";
 import { useVeyra } from "../lib/useVeyra";
 import { LANGUAGES, useI18n } from "../i18n";
 
-function Section({ title, children }: { title: string; children: ReactNode }) {
+function Section({
+  title,
+  children,
+  className = "",
+}: {
+  title: string;
+  children: ReactNode;
+  className?: string;
+}) {
   return (
-    <section className="vy-panel p-5">
+    <section className={`vy-panel p-5 ${className}`}>
       <h2 className="vy-label mb-4" style={{ color: "var(--vy-silver-300)" }}>
         {title}
       </h2>
@@ -39,8 +47,13 @@ export function SettingsScreen() {
   const [googleClient, setGoogleClient] = useState("");
   const [googleWrite, setGoogleWrite] = useState(false);
   const [gmailPassword, setGmailPassword] = useState("");
+  const [customApisText, setCustomApisText] = useState("[]");
+  const [customApiKeys, setCustomApiKeys] = useState<Record<string, string>>({});
 
-  useEffect(() => setDraft(settings), [settings]);
+  useEffect(() => {
+    setDraft(settings);
+    setCustomApisText(JSON.stringify(settings?.custom_apis ?? [], null, 2));
+  }, [settings]);
 
   if (!draft) {
     return <p className="p-8 text-sm text-silver-500">{t("settings.loading")}</p>;
@@ -62,6 +75,15 @@ export function SettingsScreen() {
 
   const save = async () => {
     setMessage(null);
+    let customApis: CustomApiDefinition[];
+    try {
+      const parsed: unknown = customApisText.trim() ? JSON.parse(customApisText) : [];
+      if (!Array.isArray(parsed)) throw new Error("Custom APIs must be an array.");
+      customApis = parsed as CustomApiDefinition[];
+    } catch {
+      setMessage(t("settings.customApisInvalid"));
+      return;
+    }
     try {
       await saveSettings({
         assistant_name: draft.assistant_name,
@@ -72,6 +94,7 @@ export function SettingsScreen() {
         audio: draft.audio,
         integrations: draft.integrations,
         interface: draft.interface,
+        custom_apis: customApis,
         ram_floor_mb: draft.ram_floor_mb,
       });
       setSaved(true);
@@ -113,6 +136,22 @@ export function SettingsScreen() {
         setGmailPassword("");
       }
       setMessage(t("settings.gmailSaved"));
+    } catch (error) {
+      setMessage((error as Error).message);
+    }
+  };
+
+  const saveCustomApiKey = async (id: string) => {
+    if (!backend) return;
+    const value = (customApiKeys[id] ?? "").trim();
+    if (!value) return;
+    try {
+      await apiFetch(backend, "/api/secrets", {
+        method: "POST",
+        body: JSON.stringify({ name: `custom_api_${id}`, value }),
+      });
+      setCustomApiKeys((current) => ({ ...current, [id]: "" }));
+      setMessage(t("settings.customApiKeySaved"));
     } catch (error) {
       setMessage((error as Error).message);
     }
@@ -256,6 +295,57 @@ export function SettingsScreen() {
               </button>
             </div>
           </Field>
+        </Section>
+
+        <Section title={t("settings.customApis")} className="lg:col-span-2">
+          <Field label={t("settings.customApisJson")}>
+            <textarea
+              className="vy-field min-h-[190px] resize-y font-mono text-[11px]"
+              spellCheck={false}
+              value={customApisText}
+              onChange={(event) => setCustomApisText(event.target.value)}
+              placeholder={'[{"id": "exa", "name": "Exa search", "base_url": "https://api.exa.ai"}]'}
+            />
+          </Field>
+          <p className="text-[11px] leading-relaxed text-silver-500">
+            {t("settings.customApisHint")}
+          </p>
+          {(draft.custom_apis ?? []).length === 0 ? (
+            <p className="text-xs text-silver-500">{t("settings.customApisEmpty")}</p>
+          ) : (
+            <div className="space-y-3">
+              <div className="vy-hairline" />
+              <p className="text-[11px] leading-relaxed text-silver-500">
+                {t("settings.customApiKeyHint")}
+              </p>
+              {(draft.custom_apis ?? []).map((api) => (
+                <Field key={api.id} label={`${api.name} (${api.id})`}>
+                  <div className="flex gap-2">
+                    <input
+                      type="password"
+                      autoComplete="off"
+                      className="vy-field flex-1"
+                      value={customApiKeys[api.id] ?? ""}
+                      onChange={(event) =>
+                        setCustomApiKeys((current) => ({
+                          ...current,
+                          [api.id]: event.target.value,
+                        }))
+                      }
+                      placeholder="••••••••"
+                    />
+                    <button
+                      type="button"
+                      className="vy-btn px-3"
+                      onClick={() => void saveCustomApiKey(api.id)}
+                    >
+                      {t("settings.saveKey")}
+                    </button>
+                  </div>
+                </Field>
+              ))}
+            </div>
+          )}
         </Section>
 
         <Section title={t("settings.voice")}>

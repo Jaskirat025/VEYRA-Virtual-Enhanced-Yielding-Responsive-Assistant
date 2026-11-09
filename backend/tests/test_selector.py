@@ -26,6 +26,13 @@ def test_selection_is_small_and_includes_clarification():
     assert "chiedi_chiarimento" in {tool.name for tool in selection.tools}
 
 
+def test_custom_api_keywords_select_custom_category():
+    registry = ensure_tools_loaded()
+    selection = select_tools("use exa to search the web", registry, lambda name: True)
+    assert Category.CUSTOM in selection.categories
+    assert "chiama_api" in {tool.name for tool in selection.tools}
+
+
 def test_disabled_tools_are_removed():
     registry = ensure_tools_loaded()
     selection = select_tools("calcola 2+2", registry, lambda name: name != "calcola")

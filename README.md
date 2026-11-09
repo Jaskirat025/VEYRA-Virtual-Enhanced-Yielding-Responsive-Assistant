@@ -33,6 +33,7 @@ Why not three installers? One binary means one build to test, one signature, one
 - **Local first.** A quantized 4B model through Ollama handles everyday requests with no network. Harder work can be escalated to an online model, with automatic fallback to the local one.
 - **Real tools, not chat only.** Open and close applications, control volume and brightness, take screenshots, read and move files, calculate with SymPy, run sandboxed Python, read GitHub issues and Gmail through a local app password (or OAuth), create calendar events, keep notes and timers.
 - **WhatsApp without an unofficial client.** Prepare a message and open the official `wa.me` share page; the user reviews it and presses Send. VEYRA never automates a personal WhatsApp account.
+- **Any REST API as a tool.** Define custom endpoints for Exa, Claude, Gemini, internal services or anything else in Settings. The local model can use them after confirmation; keys stay in Credential Manager and definitions never contain code.
 - **Risk-aware execution.** Every tool declares `SAFE`, `CONFIRM` or `DANGEROUS`. Destructive actions always ask first, with a clear summary.
 - **A HUD, not a chat box.** A central orb reacts to state (idle, listening, thinking, speaking, error), with real-time waveforms and a compact always-on-top widget.
 - **First-run downloads together.** The local Ollama model and the speech model start at the same time on first launch, with independent progress and retry. Ollama remains a user-installed prerequisite.
@@ -147,6 +148,7 @@ Nothing is written into the installation folder.
 - **API keys, app passwords and OAuth tokens in Windows Credential Manager** via `keyring`, never in plain text, never logged.
 - **Two-step tool risk model** with explicit confirmation dialogs, and a confirmation lockout after reading untrusted external content in the same turn.
 - **Prompt-injection aware ingestion**: mail, web and file content is wrapped in `<dati_esterni fonte="...">` blocks marked as data, not instructions.
+- **Custom APIs are explicit**: only configured base URLs are reachable, every call is `CONFIRM`, keys are stored separately, and responses are wrapped as external data.
 - **Sandboxed Python**: separate process, timeout, no network, no access to user documents.
 - **Minimal Tauri allowlist** and a restrictive Content Security Policy.
 - **No telemetry, no analytics, no auto-update pings.**
@@ -162,7 +164,7 @@ veyra/
 ├── src-tauri/            Rust desktop shell (Phase 4+)
 ├── ui/                   React + TypeScript interface (Phase 4+)
 ├── backend/              Python brain and audio pipeline (Phase 1+)
-├── docs/                 installation, languages, design system, tools, OAuth
+├── docs/                 installation, languages, design system, tools, OAuth, custom APIs
 ├── scripts/              repository tooling (hygiene gate)
 ├── .github/workflows/    CI and the Windows installer release pipeline
 ├── .env.example          fake values only — copy to .env for local dev
@@ -191,7 +193,7 @@ Each source directory contains a `README.md` describing its planned layout until
 | 6 | Listening: VAD + faster-whisper + waveform | implemented, device test pending |
 | 7 | Wake word with openWakeWord | implemented, model training required |
 | 8 | Router with online model and offline fallback | implemented |
-| 9 | GitHub tools, Gmail (local app password or OAuth), Calendar OAuth | implemented, credentials required |
+| 9 | GitHub tools, Gmail (local app password or OAuth), Calendar OAuth, custom REST APIs | implemented, credentials required |
 | 10 | Settings, onboarding, tool log, i18n EN/IT/ZH | implemented |
 | 11 | Python sandbox and UI automation tools | implemented, Windows test pending |
 | 12 | Installer, GitHub Actions release, final documentation | pipeline ready, Windows build pending |
@@ -206,6 +208,7 @@ Each phase ends with install commands, a manual test script, Windows troubleshoo
 - [Languages: installer choice, i18n, what stays English](docs/languages.md)
 - [Design system: tokens, type, motion, orb states](docs/design-system.md)
 - [Adding a tool](docs/adding-a-tool.md)
+- [Custom APIs: Exa, Claude, Gemini and any REST endpoint](docs/custom-apis.md)
 - [Creating your own Google credentials](docs/google-oauth.md)
 
 ---

@@ -52,6 +52,7 @@ Reporters are credited in the advisory unless they ask to stay anonymous.
 | Secrets at rest | API keys, app passwords and OAuth tokens in Windows Credential Manager through `keyring`; never in `config.json`, never logged |
 | Tool risk | Every tool declares `SAFE`, `CONFIRM` or `DANGEROUS`; confirmation is required in the UI and, for high risk, summarized before execution |
 | Prompt injection | External content (mail, web, files) is wrapped in `<dati_esterni fonte="...">` blocks and marked as data; after such content is read in a turn, `CONFIRM`/`DANGEROUS` tools stay blocked until the user confirms |
+| Custom APIs | Definitions are validated to http(s), cannot contain credentials, auth headers or traversal paths; keys stay in Credential Manager; every call is `CONFIRM`; responses are wrapped as external data; the model cannot choose an arbitrary URL |
 | Code execution | `esegui_python` runs in a separate process with a timeout, no network, and no access to user document folders |
 | Desktop shell | Minimal Tauri allowlist, restrictive CSP, no remote origins in the webview, no `eval` of untrusted content |
 | Network | No telemetry, no analytics, no background polling; online providers are opt-in per integration |
@@ -62,7 +63,7 @@ Reporters are credited in the advisory unless they ask to stay anonymous.
 In scope:
 
 - a malicious or compromised online model provider returning hostile content;
-- prompt injection through e-mail, issue text, web pages or files;
+- prompt injection through e-mail, issue text, web pages, files or a configured custom API response;
 - a compromised dependency in the supply chain;
 - another local process on the same machine trying to reach the backend;
 - accidental disclosure of secrets through logs, crash reports or the repository.

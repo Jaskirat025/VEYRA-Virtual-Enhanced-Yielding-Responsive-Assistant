@@ -168,6 +168,19 @@ KEYWORDS: dict[Category, tuple[str, ...]] = {
         "manda un whatsapp",
         "invia un whatsapp",
     ),
+    Category.CUSTOM: (
+        "api",
+        "custom api",
+        "endpoint",
+        "exa",
+        "mercury",
+        "claude",
+        "gemini",
+        "anthropic",
+        "rest api",
+        "http request",
+        "webhook",
+    ),
 }
 
 META_TOOL = "chiedi_chiarimento"
