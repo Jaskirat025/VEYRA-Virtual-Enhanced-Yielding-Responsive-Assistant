@@ -16,6 +16,7 @@ from backend import __version__
 from backend.api.ws import Session
 from backend.audio.stt import available as stt_available
 from backend.audio.tts import SpeechUnavailable, synthesize
+from backend.bootstrap import BootstrapManager
 from backend.brain.agent import ConfirmBroker
 from backend.brain.llm import LLMError, fetch_ollama_models
 from backend.config import AppSettings, SettingsStore
@@ -27,7 +28,13 @@ from backend.tools.registry import ensure_tools_loaded
 
 logger = logging.getLogger(__name__)
 
-SECRET_NAMES = ("online_api_key", "github_token", "google_client_secret", "google_token_json")
+SECRET_NAMES = (
+    "online_api_key",
+    "github_token",
+    "google_client_secret",
+    "google_token_json",
+    "gmail_app_password",
+)
 DEV_ORIGINS = [
     "http://localhost:1420",
     "http://127.0.0.1:1420",
@@ -72,6 +79,7 @@ def create_app(
     db: Database,
     token: str,
     broker: ConfirmBroker | None = None,
+    bootstrap: BootstrapManager | None = None,
 ) -> FastAPI:
     settings_store.load()
     app = FastAPI(title="Veyra", version=__version__, docs_url=None, redoc_url=None)
@@ -79,6 +87,7 @@ def create_app(
     app.state.db = db
     app.state.token = token
     app.state.broker = broker or ConfirmBroker()
+    app.state.bootstrap = bootstrap or BootstrapManager(settings_store)
     ensure_tools_loaded()
 
     app.add_middleware(
@@ -200,6 +209,14 @@ def create_app(
         except Exception as exc:
             return {"ok": False, "models": [], "error": f"Ollama is not reachable: {exc}"}
         return {"ok": True, "models": models}
+
+    @app.get("/api/bootstrap/status")
+    async def bootstrap_status() -> dict[str, Any]:
+        return app.state.bootstrap.snapshot()
+
+    @app.post("/api/bootstrap/start")
+    async def bootstrap_start() -> dict[str, Any]:
+        return await app.state.bootstrap.start()
 
     @app.get("/api/onboarding/check")
     async def onboarding_check() -> dict[str, Any]:

@@ -31,6 +31,7 @@ class Category(StrEnum):
     GITHUB = "github"
     GOOGLE = "google"
     MEMORY = "memory"
+    COMMUNICATION = "communication"
     META = "meta"
 
 

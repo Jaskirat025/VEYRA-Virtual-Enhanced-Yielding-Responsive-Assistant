@@ -38,6 +38,7 @@ export function SettingsScreen() {
   );
   const [googleClient, setGoogleClient] = useState("");
   const [googleWrite, setGoogleWrite] = useState(false);
+  const [gmailPassword, setGmailPassword] = useState("");
 
   useEffect(() => setDraft(settings), [settings]);
 
@@ -89,6 +90,29 @@ export function SettingsScreen() {
       });
       setSecret("");
       setMessage(t("settings.saved"));
+    } catch (error) {
+      setMessage((error as Error).message);
+    }
+  };
+
+  const saveGmail = async () => {
+    if (!backend) return;
+    setMessage(null);
+    try {
+      await saveSettings({
+        integrations: {
+          ...draft.integrations,
+          gmail_address: draft.integrations.gmail_address.trim(),
+        },
+      });
+      if (gmailPassword.trim()) {
+        await apiFetch(backend, "/api/secrets", {
+          method: "POST",
+          body: JSON.stringify({ name: "gmail_app_password", value: gmailPassword.trim() }),
+        });
+        setGmailPassword("");
+      }
+      setMessage(t("settings.gmailSaved"));
     } catch (error) {
       setMessage((error as Error).message);
     }
@@ -329,7 +353,44 @@ export function SettingsScreen() {
             />
             {t("settings.googleReadOnly")}
           </label>
-          <Field label="Google OAuth client JSON">
+          <Field label={t("settings.gmailAddress")}>
+            <input
+              type="email"
+              autoComplete="off"
+              className="vy-field"
+              value={draft.integrations.gmail_address}
+              placeholder="Gmail address"
+              onChange={(event) =>
+                patchGroup("integrations", "gmail_address", event.target.value)
+              }
+            />
+          </Field>
+          <Field label={t("settings.gmailPassword")}>
+            <input
+              type="password"
+              autoComplete="off"
+              className="vy-field"
+              value={gmailPassword}
+              onChange={(event) => setGmailPassword(event.target.value)}
+              placeholder="•••• •••• •••• ••••"
+            />
+          </Field>
+          <p className="text-[11px] leading-relaxed text-silver-500">
+            {t("settings.gmailLocalHint")}{" "}
+            <a
+              className="text-accent underline"
+              href="https://myaccount.google.com/apppasswords"
+              target="_blank"
+              rel="noreferrer"
+            >
+              {t("settings.gmailAppPasswords")}
+            </a>
+          </p>
+          <button type="button" className="vy-btn" onClick={() => void saveGmail()}>
+            {t("settings.saveGmail")}
+          </button>
+          <div className="vy-hairline" />
+          <Field label="Google OAuth client JSON (Calendar / drafts)">
             <textarea
               className="vy-field min-h-[76px] resize-y font-mono text-[11px]"
               value={googleClient}

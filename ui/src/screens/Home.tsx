@@ -4,6 +4,32 @@ import { Waveform } from "../components/Waveform";
 import { useVeyra } from "../lib/useVeyra";
 import { useI18n } from "../i18n";
 
+function Readout({
+  label,
+  value,
+  accent = false,
+}: {
+  label: string;
+  value: string;
+  accent?: boolean;
+}) {
+  return (
+    <div className="min-w-0 border-l border-white/10 px-4 py-2.5 first:border-l-0">
+      <p className="vy-label text-[9px]">{label}</p>
+      <p className="mt-1 flex min-w-0 items-center gap-2 font-display text-[13px] tracking-wide text-silver-100">
+        {accent && (
+          <span
+            aria-hidden="true"
+            className="inline-block h-1.5 w-1.5 shrink-0 rounded-full"
+            style={{ backgroundColor: "var(--vy-accent-500)" }}
+          />
+        )}
+        <span className="truncate">{value}</span>
+      </p>
+    </div>
+  );
+}
+
 export function HomeScreen() {
   const {
     orbState,
@@ -15,6 +41,7 @@ export function HomeScreen() {
     cancel,
     connected,
     error,
+    health,
   } = useVeyra();
   const { t } = useI18n();
   const [text, setText] = useState("");
@@ -31,22 +58,40 @@ export function HomeScreen() {
   };
 
   return (
-    <div className="flex h-full flex-col items-center justify-between gap-6 px-6 py-8">
+    <div className="flex h-full flex-col items-center justify-between gap-6 px-6 py-6">
       <div className="flex w-full max-w-content flex-1 flex-col items-center justify-center gap-4">
-        <span className="vy-label">{t(`state.${orbState}`)}</span>
+        <div className="grid w-full max-w-2xl grid-cols-3 border-y border-white/10 bg-black/10">
+          <Readout
+            label={t("status.link")}
+            value={connected ? t("status.online") : t("status.offline")}
+            accent={connected}
+          />
+          <Readout
+            label={t("status.model")}
+            value={health?.model ?? settings?.models.local_model ?? "qwen3:4b"}
+          />
+          <Readout
+            label={t("status.mode")}
+            value={health?.online_enabled ? "LOCAL + ONLINE" : t("status.local")}
+          />
+        </div>
+
+        <span className="vy-label" role="status" aria-live="polite">
+          {t(`state.${orbState}`)}
+        </span>
 
         <div className="relative flex items-center justify-center">
           <Orb
             state={orbState}
             level={level}
             lowPower={settings?.interface.low_power ?? false}
-            size={300}
+            size={264}
           />
         </div>
 
         <Waveform level={level} active={active} />
 
-        <div className="mt-2 min-h-[92px] w-full max-w-xl text-center">
+        <div className="mt-1 min-h-[92px] w-full max-w-xl text-center">
           {lastUser && (
             <p className="mb-1 font-mono text-[11px] uppercase tracking-[0.14em] text-silver-500">
               {t("chat.you")}
@@ -132,11 +177,6 @@ export function HomeScreen() {
             {t("home.send")}
           </button>
         </form>
-
-        <p className="mt-2 text-center font-mono text-[10px] uppercase tracking-[0.14em] text-silver-500">
-          {settings?.models.local_model ?? "qwen3:4b"} ·{" "}
-          {settings?.interface.low_power ? t("status.lowPower") : "HUD"}
-        </p>
       </div>
     </div>
   );

@@ -27,7 +27,7 @@ export function Sidebar({ view, onChange }: SidebarProps) {
   return (
     <nav
       aria-label="Primary"
-      className="flex w-16 shrink-0 flex-col gap-1 border-r border-white/5 bg-gunmetal-800/60 py-3 xl:w-52"
+      className="flex w-16 shrink-0 flex-col gap-1 border-r border-white/10 bg-gunmetal-900/55 py-4 xl:w-52"
     >
       {items.map((item) => {
         const active = view === item.view;
@@ -37,16 +37,16 @@ export function Sidebar({ view, onChange }: SidebarProps) {
             type="button"
             onClick={() => onChange(item.view)}
             aria-current={active ? "page" : undefined}
-            className={`group relative mx-2 flex items-center gap-3 rounded-md px-3 py-2.5 text-left transition-colors ${
+            className={`group relative mx-2 flex items-center gap-3 rounded-md px-3 py-2.5 text-left transition-colors duration-150 ${
               active
-                ? "bg-white/[0.06] text-silver-100"
-                : "text-silver-400 hover:bg-white/[0.03] hover:text-silver-100"
+                ? "bg-white/[0.055] text-silver-100"
+                : "text-silver-500 hover:bg-white/[0.035] hover:text-silver-100"
             }`}
           >
             {active && (
               <span
                 aria-hidden="true"
-                className="absolute left-0 top-1/2 h-5 w-[2px] -translate-y-1/2"
+                className="absolute left-0 top-1/2 h-6 w-[2px] -translate-y-1/2"
                 style={{ backgroundColor: "var(--vy-accent-500)" }}
               />
             )}
@@ -72,6 +72,7 @@ export function Sidebar({ view, onChange }: SidebarProps) {
       })}
 
       <div className="mt-auto hidden px-5 xl:block">
+        <div className="vy-hairline mb-3" />
         <p className="vy-label leading-relaxed opacity-70">VEYRA 0.1</p>
       </div>
     </nav>

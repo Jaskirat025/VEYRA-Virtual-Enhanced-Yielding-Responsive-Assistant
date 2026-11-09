@@ -7,6 +7,7 @@ import threading
 from pathlib import Path
 
 from backend.config import AudioSettings
+from backend.paths import models_dir
 
 
 class SpeechUnavailable(RuntimeError):
@@ -41,6 +42,7 @@ def _load(settings: AudioSettings):
                 settings.stt_model,
                 device="cpu",
                 compute_type=settings.stt_compute_type,
+                download_root=str(models_dir() / "whisper"),
             )
             _model_key = key
         except Exception as exc:

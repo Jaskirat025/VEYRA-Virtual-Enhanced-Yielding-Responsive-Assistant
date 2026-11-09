@@ -58,6 +58,7 @@ class IntegrationSettings(BaseModel):
     github_login: str = ""
     github_read_only: bool = True
     google_read_only: bool = True
+    gmail_address: str = ""
 
 
 class InterfaceSettings(BaseModel):

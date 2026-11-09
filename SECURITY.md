@@ -49,7 +49,7 @@ Reporters are credited in the advisory unless they ask to stay anonymous.
 | --- | --- |
 | Transport | Backend binds to `127.0.0.1` only, on a random free port chosen at startup |
 | Authentication | Per-run session token, required on every HTTP request and WebSocket message; regenerated on each start |
-| Secrets at rest | API keys and OAuth tokens in Windows Credential Manager through `keyring`; never in `config.json`, never logged |
+| Secrets at rest | API keys, app passwords and OAuth tokens in Windows Credential Manager through `keyring`; never in `config.json`, never logged |
 | Tool risk | Every tool declares `SAFE`, `CONFIRM` or `DANGEROUS`; confirmation is required in the UI and, for high risk, summarized before execution |
 | Prompt injection | External content (mail, web, files) is wrapped in `<dati_esterni fonte="...">` blocks and marked as data; after such content is read in a turn, `CONFIRM`/`DANGEROUS` tools stay blocked until the user confirms |
 | Code execution | `esegui_python` runs in a separate process with a timeout, no network, and no access to user document folders |

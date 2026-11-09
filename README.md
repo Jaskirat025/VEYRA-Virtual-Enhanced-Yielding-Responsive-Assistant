@@ -31,9 +31,11 @@ Why not three installers? One binary means one build to test, one signature, one
 - **Wake word → listen → transcribe → route → use tools → answer out loud.**
   Default wake word “Ehi Veyra”, changeable in Settings. Default name “Veyra”, also changeable.
 - **Local first.** A quantized 4B model through Ollama handles everyday requests with no network. Harder work can be escalated to an online model, with automatic fallback to the local one.
-- **Real tools, not chat only.** Open and close applications, control volume and brightness, take screenshots, read and move files, calculate with SymPy, run sandboxed Python, read GitHub issues and Gmail, create calendar events, keep notes and timers.
+- **Real tools, not chat only.** Open and close applications, control volume and brightness, take screenshots, read and move files, calculate with SymPy, run sandboxed Python, read GitHub issues and Gmail through a local app password (or OAuth), create calendar events, keep notes and timers.
+- **WhatsApp without an unofficial client.** Prepare a message and open the official `wa.me` share page; the user reviews it and presses Send. VEYRA never automates a personal WhatsApp account.
 - **Risk-aware execution.** Every tool declares `SAFE`, `CONFIRM` or `DANGEROUS`. Destructive actions always ask first, with a clear summary.
 - **A HUD, not a chat box.** A central orb reacts to state (idle, listening, thinking, speaking, error), with real-time waveforms and a compact always-on-top widget.
+- **First-run downloads together.** The local Ollama model and the speech model start at the same time on first launch, with independent progress and retry. Ollama remains a user-installed prerequisite.
 - **No telemetry, ever.** No connection is made that the user did not explicitly enable.
 
 ---
@@ -135,14 +137,14 @@ Nothing is written into the installation folder.
 | `%APPDATA%\Veyra\veyra.db` | SQLite: notes, chat history, timers, tool log |
 | `%APPDATA%\Veyra\logs\` | rotating local logs, redacted |
 | `%APPDATA%\Veyra\models\` | downloaded speech models, never committed |
-| Windows Credential Manager | API keys, OAuth tokens, session secrets |
+| Windows Credential Manager | API keys, app passwords, OAuth tokens, session secrets |
 
 ---
 
 ## Security and privacy in one screen
 
 - Backend listens on **loopback only**, random port, token authenticated on every HTTP and WebSocket request; token regenerated each start.
-- **API keys and tokens in Windows Credential Manager** via `keyring`, never in plain text, never logged.
+- **API keys, app passwords and OAuth tokens in Windows Credential Manager** via `keyring`, never in plain text, never logged.
 - **Two-step tool risk model** with explicit confirmation dialogs, and a confirmation lockout after reading untrusted external content in the same turn.
 - **Prompt-injection aware ingestion**: mail, web and file content is wrapped in `<dati_esterni fonte="...">` blocks marked as data, not instructions.
 - **Sandboxed Python**: separate process, timeout, no network, no access to user documents.
@@ -189,7 +191,7 @@ Each source directory contains a `README.md` describing its planned layout until
 | 6 | Listening: VAD + faster-whisper + waveform | implemented, device test pending |
 | 7 | Wake word with openWakeWord | implemented, model training required |
 | 8 | Router with online model and offline fallback | implemented |
-| 9 | GitHub tools, then Google (OAuth, read-only first) | implemented, credentials required |
+| 9 | GitHub tools, Gmail (local app password or OAuth), Calendar OAuth | implemented, credentials required |
 | 10 | Settings, onboarding, tool log, i18n EN/IT/ZH | implemented |
 | 11 | Python sandbox and UI automation tools | implemented, Windows test pending |
 | 12 | Installer, GitHub Actions release, final documentation | pipeline ready, Windows build pending |

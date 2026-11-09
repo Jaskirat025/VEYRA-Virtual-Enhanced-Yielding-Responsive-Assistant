@@ -92,6 +92,7 @@ The pre-classifier maps an utterance to one or more categories and only those to
 | `github` | `lista_repo`, `leggi_issue`, `ultimi_commit`, `crea_issue` |
 | `google` | `cerca_mail`, `leggi_mail`, `bozza_mail`, `invia_mail`, `eventi_oggi`, `eventi_range`, `crea_evento` |
 | `memory` | `salva_nota`, `cerca_note`, `timer`, `sveglia` |
+| `communication` | `condividi_whatsapp` |
 | `meta` | `chiedi_chiarimento` |
 
 Keyword matching is the default selector; optional lightweight embeddings (`all-MiniLM`, lazy loaded, unloaded after use) improve ambiguous cases. If selection is uncertain, include `chiedi_chiarimento` plus the two most likely categories rather than dumping every tool.
@@ -107,7 +108,7 @@ Keyword matching is the default selector; optional lightweight embeddings (`all-
 ## Settings and permissions
 
 - Every tool has an on/off switch in Settings → Permissions, grouped by category.
-- Integrations (GitHub, Google) are off until configured; read-only is the default.
+- Integrations (GitHub, Google) are off until configured; read-only is the default. Gmail can use a local Google app password; Calendar and Gmail drafts still use OAuth.
 - Disabled tools are removed from the model's tool list, and calling one is an error, never an execution.
 - Per-tool last-used time and error count are visible in the tool log.
 

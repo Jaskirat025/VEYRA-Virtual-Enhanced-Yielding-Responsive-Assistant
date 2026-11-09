@@ -71,6 +71,27 @@ def test_secrets_are_never_returned(tmp_path):
         assert removed.json()["status"]["github_token"] is False
 
 
+def test_bootstrap_status_lists_both_downloads(tmp_path):
+    with make_client(tmp_path) as client:
+        response = client.get("/api/bootstrap/status", headers=headers())
+    assert response.status_code == 200
+    data = response.json()
+    assert data["running"] is False
+    assert {job["id"] for job in data["jobs"]} == {"local_model", "speech_model"}
+
+
+def test_gmail_app_password_secret_is_accepted(tmp_path):
+    with make_client(tmp_path) as client:
+        response = client.post(
+            "/api/secrets",
+            headers=headers(),
+            json={"name": "gmail_app_password", "value": "example-app-password"},
+        )
+    assert response.status_code == 200
+    assert response.json()["saved"] is True
+    assert "example-app-password" not in response.text
+
+
 def test_unknown_secret_name_is_rejected(tmp_path):
     with make_client(tmp_path) as client:
         response = client.post(

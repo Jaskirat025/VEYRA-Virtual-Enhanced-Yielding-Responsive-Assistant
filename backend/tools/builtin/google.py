@@ -7,10 +7,12 @@ Credential Manager. Read-only is the default and writing must be enabled.
 from __future__ import annotations
 
 import base64
+import json
 from datetime import UTC, datetime, timedelta
 from email.mime.text import MIMEText
 
 from backend.context import get_context
+from backend.integrations import gmail_local
 from backend.secrets import get_secret
 from backend.tools.external import wrap_external
 from backend.tools.registry import Category, Risk, ToolError, tool
@@ -27,7 +29,7 @@ def _build(service: str, version: str):
     if not raw:
         raise ToolError("Google is not connected. Sign in from Settings > Accounts.")
     try:
-        credentials = Credentials.from_authorized_user_info(eval(raw))  # noqa: S307 - stored JSON
+        credentials = Credentials.from_authorized_user_info(json.loads(raw))
     except Exception as exc:
         raise ToolError("The stored Google token is invalid. Sign in again.") from exc
     try:
@@ -54,6 +56,9 @@ def cerca_mail(query: str = "", limite: int = 5) -> str:
         query: Gmail search query; empty returns the latest messages.
         limite: number of messages, 1-10.
     """
+    if gmail_local.configured():
+        return gmail_local.search_messages(query, limite)
+
     service = _build("gmail", "v1")
     count = max(1, min(10, int(limite)))
     try:
@@ -119,6 +124,9 @@ def leggi_mail(message_id: str) -> str:
     """
     if not message_id.strip():
         raise ToolError("The message id is empty.")
+    if gmail_local.configured():
+        return gmail_local.read_message(message_id)
+
     service = _build("gmail", "v1")
     try:
         detail = (
@@ -153,6 +161,11 @@ def bozza_mail(destinatario: str, oggetto: str, corpo: str) -> str:
         corpo: plain-text body.
     """
     _require_write("Gmail")
+    if gmail_local.configured():
+        raise ToolError(
+            "Local Gmail supports search, read and send. "
+            "Drafts require the Google OAuth connection."
+        )
     if "@" not in destinatario:
         raise ToolError("The recipient address is invalid.")
     service = _build("gmail", "v1")
@@ -184,6 +197,9 @@ def invia_mail(destinatario: str, oggetto: str, corpo: str) -> str:
         oggetto: subject line.
         corpo: plain-text body.
     """
+    if gmail_local.configured():
+        return gmail_local.send_message(destinatario, oggetto, corpo)
+
     _require_write("Gmail")
     if "@" not in destinatario:
         raise ToolError("The recipient address is invalid.")

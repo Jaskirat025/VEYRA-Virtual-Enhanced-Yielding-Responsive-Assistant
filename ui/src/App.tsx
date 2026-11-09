@@ -19,7 +19,7 @@ export default function App() {
   const [view, setView] = useState<View>("home");
 
   return (
-    <div className="relative flex h-screen flex-col overflow-hidden bg-gunmetal-700">
+    <div className="vy-app-bg vy-grain relative flex h-screen flex-col overflow-hidden">
       <TitleBar />
 
       <div className="flex min-h-0 flex-1">

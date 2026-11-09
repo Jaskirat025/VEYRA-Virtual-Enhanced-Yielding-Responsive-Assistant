@@ -160,6 +160,14 @@ KEYWORDS: dict[Category, tuple[str, ...]] = {
         "提醒",
         "计时器",
     ),
+    Category.COMMUNICATION: (
+        "whatsapp",
+        "wa.me",
+        "whatsapp web",
+        "messaggio whatsapp",
+        "manda un whatsapp",
+        "invia un whatsapp",
+    ),
 }
 
 META_TOOL = "chiedi_chiarimento"

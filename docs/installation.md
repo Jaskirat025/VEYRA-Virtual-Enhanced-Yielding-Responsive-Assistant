@@ -19,20 +19,19 @@
 1. Download the single release asset for Windows x64, `Veyra_<version>_x64-setup.exe`.
 2. Run it and choose the setup language: **English**, **Italiano** or **简体中文**. This is one installer with a language selector, not three separate builds.
 3. Choose the install directory (default per-user, no administrator rights needed).
-4. Finish setup; VEYRA starts and shows the onboarding wizard.
+4. Finish setup; VEYRA starts, shows the onboarding wizard and begins the first-run downloads immediately.
 
 Windows SmartScreen may warn about an unsigned build. Until releases are code-signed, verify the SHA-256 checksum published with the release before running the installer.
 
 ## First-run onboarding
 
-1. **Ollama check** — detect the local service and its version, with a link to the official installer if missing.
-2. **Model download** — pull the default local model with visible progress and size, or pick another installed model.
-3. **Microphone test** — permission check, level meter, device selection.
-4. **Voice test** — short spoken sample, volume and voice selection.
-5. **Language and wake word** — interface language, assistant name, wake word.
-6. **Privacy summary** — what runs locally, what would leave the machine, and what stays off until enabled.
+1. **Identity and language** — assistant name and interface language.
+2. **First-run downloads** — the local Ollama model and the faster-whisper speech model start together as soon as onboarding opens. The screen shows each job, its size and progress. If one fails, retry it without restarting the other. Ollama must already be installed; VEYRA does not install it.
+3. **Microphone** — local speech input, with keyboard input always available as a fallback.
+4. **Voice** — a short local voice test.
+5. **Summary** — name, language, model and data folder.
 
-Everything in onboarding can be skipped and revisited in Settings.
+Onboarding can be skipped. Name, language, microphone and voice settings can be changed later in Settings; the two downloads continue in the background.
 
 ## Developer prerequisites
 
@@ -77,7 +76,7 @@ npm --prefix ui run build
 | `%APPDATA%\Veyra\veyra.db` | notes, chat history, timers, tool log | kept by default |
 | `%APPDATA%\Veyra\logs\` | rotating redacted logs | kept by default |
 | `%APPDATA%\Veyra\models\` | downloaded speech models | kept by default |
-| Windows Credential Manager | keys and OAuth tokens | removed when the user deletes them in Settings |
+| Windows Credential Manager | keys, app passwords and OAuth tokens | removed when the user deletes them in Settings |
 
 Nothing is written into the installation directory. Settings → Privacy → “Delete my data” removes the Veyra folder and its credential entries after an explicit confirmation.
 

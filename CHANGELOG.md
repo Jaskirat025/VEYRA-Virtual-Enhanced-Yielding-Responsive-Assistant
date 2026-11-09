@@ -4,6 +4,23 @@ All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **First-run downloads.** Ollama and Whisper downloads run in parallel during onboarding, report byte-level progress where available, skip assets that are already installed, and can be retried independently.
+- **Local Gmail.** Gmail search, read and send over IMAP/SMTP with a Google App Password, with no OAuth client. Drafts and Calendar remain OAuth-only.
+- **WhatsApp sharing.** `condividi_whatsapp` opens the official `wa.me` share page with a prefilled message; the user reviews and sends it manually. No personal-account automation.
+
+### Security
+
+- Google app passwords are stored in Windows Credential Manager and are never returned by the API.
+
+### Known limitations
+
+- Local Gmail does not create drafts; Calendar still requires OAuth.
+- The WhatsApp tool is a share link, not an inbox integration.
+
 ## [0.1.0] — 2026-11-09
 
 First complete development build. Windows-only paths still need a manual test pass on Windows 10/11.

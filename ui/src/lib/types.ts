@@ -38,6 +38,7 @@ export interface IntegrationSettings {
   github_login: string;
   github_read_only: boolean;
   google_read_only: boolean;
+  gmail_address: string;
 }
 
 export interface InterfaceSettings {
@@ -68,6 +69,26 @@ export interface Health {
   online_enabled: boolean;
   ram_mb: number;
   data_dir: string;
+}
+
+export type DownloadStatus = "pending" | "running" | "done" | "skipped" | "error";
+
+export interface BootstrapJob {
+  id: string;
+  label: string;
+  status: DownloadStatus;
+  progress: number | null;
+  detail: string;
+  downloaded: number;
+  total: number;
+  error: string;
+}
+
+export interface BootstrapStatus {
+  running: boolean;
+  complete: boolean;
+  failed: boolean;
+  jobs: BootstrapJob[];
 }
 
 export interface ToolInfo {

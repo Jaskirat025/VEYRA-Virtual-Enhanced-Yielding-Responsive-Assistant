@@ -49,7 +49,7 @@ body,
 }
 
 body {
-  background-color: var(--vy-gunmetal-700);
+  background-color: var(--vy-gunmetal-900);
   color: var(--vy-silver-100);
   font-family: var(--vy-font-body);
   overflow: hidden;
@@ -81,14 +81,21 @@ body {
 }
 
 @layer components {
+  .vy-app-bg {
+    background:
+      radial-gradient(1000px 520px at 84% -12%, rgba(255, 90, 31, 0.07), transparent 62%),
+      radial-gradient(900px 620px at -10% 110%, rgba(197, 203, 208, 0.045), transparent 62%),
+      linear-gradient(180deg, var(--vy-gunmetal-700), var(--vy-gunmetal-800) 52%, var(--vy-gunmetal-900));
+  }
+
   .vy-panel {
     background:
-      linear-gradient(180deg, rgba(197, 203, 208, 0.05), transparent 38%),
-      var(--vy-gunmetal-800);
+      linear-gradient(180deg, rgba(197, 203, 208, 0.055), transparent 38%),
+      linear-gradient(160deg, var(--vy-gunmetal-800), var(--vy-gunmetal-900));
     box-shadow:
       inset 0 0 0 1px var(--vy-line),
-      inset 0 1px 0 rgba(228, 232, 235, 0.05),
-      0 12px 32px rgba(0, 0, 0, 0.35);
+      inset 0 1px 0 rgba(228, 232, 235, 0.07),
+      0 18px 44px rgba(0, 0, 0, 0.32);
     clip-path: polygon(
       0 0,
       calc(100% - var(--vy-cut)) 0,
@@ -100,7 +107,7 @@ body {
   }
 
   .vy-panel-flat {
-    background: var(--vy-gunmetal-800);
+    background: linear-gradient(180deg, rgba(197, 203, 208, 0.035), transparent 55%), var(--vy-gunmetal-800);
     box-shadow: inset 0 0 0 1px var(--vy-line);
     border-radius: var(--vy-radius-panel);
   }
@@ -116,9 +123,45 @@ body {
 
   .vy-grid {
     background-image:
-      linear-gradient(to right, rgba(197, 203, 208, 0.04) 1px, transparent 1px),
-      linear-gradient(to bottom, rgba(197, 203, 208, 0.04) 1px, transparent 1px);
-    background-size: 32px 32px;
+      linear-gradient(to right, rgba(197, 203, 208, 0.035) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(197, 203, 208, 0.035) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  .vy-hairline {
+    height: 1px;
+    background: linear-gradient(90deg, var(--vy-line-strong), transparent 78%);
+  }
+
+  .vy-progress {
+    position: relative;
+    height: 4px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: var(--vy-gunmetal-900);
+    box-shadow: inset 0 0 0 1px var(--vy-line);
+  }
+
+  .vy-progress > span {
+    display: block;
+    height: 100%;
+    min-width: 2px;
+    background: linear-gradient(90deg, var(--vy-accent-600), var(--vy-accent-500));
+    transition: width var(--vy-dur-base) var(--vy-ease);
+  }
+
+  .vy-progress[data-indeterminate="true"] > span {
+    width: 36%;
+    animation: vy-progress-sweep 1.15s var(--vy-ease) infinite;
+  }
+
+  @keyframes vy-progress-sweep {
+    0% {
+      transform: translateX(-110%);
+    }
+    100% {
+      transform: translateX(310%);
+    }
   }
 
   .vy-grain::after {
@@ -140,7 +183,8 @@ body {
     min-height: 36px;
   }
   .vy-btn:hover:not(:disabled) {
-    background: rgba(197, 203, 208, 0.06);
+    background: rgba(197, 203, 208, 0.065);
+    box-shadow: inset 0 0 0 1px var(--vy-silver-500);
   }
   .vy-btn:disabled {
     opacity: 0.45;
@@ -150,7 +194,7 @@ body {
   .vy-btn-primary {
     background: var(--vy-accent-500);
     color: var(--vy-ink-on-accent);
-    box-shadow: none;
+    box-shadow: 0 0 0 1px rgba(255, 90, 31, 0.2), 0 10px 24px rgba(0, 0, 0, 0.28);
     font-weight: 600;
   }
   .vy-btn-primary:hover:not(:disabled) {
@@ -181,6 +225,7 @@ body {
   }
   .vy-chip:hover {
     color: var(--vy-silver-100);
+    background: rgba(197, 203, 208, 0.04);
     box-shadow: inset 0 0 0 1px var(--vy-line-strong);
   }
 }
