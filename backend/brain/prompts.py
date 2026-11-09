@@ -7,7 +7,7 @@ Users can replace the whole prompt from Settings.
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 
 from backend.config import AppSettings
 
@@ -86,4 +86,41 @@ def build_messages(settings: AppSettings, history: list[dict], user_text: str) -
         if role in {"user", "assistant"} and content:
             messages.append({"role": role, "content": content})
     messages.append({"role": "user", "content": user_text})
+    return messages
+
+
+_LANGUAGE_NAMES = {"en": "English", "it": "Italian", "zh": "Chinese"}
+
+
+def build_proactive_messages(settings: AppSettings, history: list[dict]) -> list[dict]:
+    """Build a no-tools prompt for an optional, unprompted local check-in."""
+    name = settings.assistant_name.strip() or "Veyra"
+    language = _LANGUAGE_NAMES.get(settings.interface.language, "English")
+    now = datetime.now().astimezone()
+    lines: list[str] = []
+    for item in history[-6:]:
+        role = item.get("role")
+        content = str(item.get("content") or "").strip()
+        if role in {"user", "assistant"} and content:
+            lines.append(f"{role}: {content[:400]}")
+
+    system = (
+        f"You are {name}, a calm local desktop assistant. The user has not addressed you "
+        "for a while. You may speak first only if you have one genuinely useful, short "
+        "check-in based on the recent conversation. Current local date and time: "
+        f"{now.strftime('%A %Y-%m-%d %H:%M')}. Answer in {language}. "
+        "Do not claim to have checked mail, calendar, files, apps, or system status. "
+        "Do not call tools, request confirmation, or suggest a risky action. "
+        "Do not interrupt with small talk. If there is nothing useful to say, reply "
+        "exactly [SILENT]."
+    )
+    messages: list[dict] = [{"role": "system", "content": system}]
+    if lines:
+        messages.append(
+            {
+                "role": "system",
+                "content": "Recent conversation (context only):\n" + "\n".join(lines),
+            }
+        )
+    messages.append({"role": "user", "content": "Decide whether to speak now."})
     return messages

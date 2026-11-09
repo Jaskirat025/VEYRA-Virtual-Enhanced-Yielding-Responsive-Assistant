@@ -21,6 +21,7 @@ from backend.bootstrap import BootstrapManager
 from backend.brain.agent import ConfirmBroker
 from backend.brain.llm import LLMError, fetch_ollama_models
 from backend.config import AppSettings, SettingsStore
+from backend.integrations import calendar_ics
 from backend.integrations.google_oauth import GoogleAuthError, connect, save_client_config
 from backend.memory.db import Database
 from backend.paths import app_data_dir
@@ -35,6 +36,7 @@ SECRET_NAMES = (
     "google_client_secret",
     "google_token_json",
     "gmail_app_password",
+    "calendar_ics_url",
 )
 CUSTOM_API_SECRET_PREFIX = "custom_api_"
 _CUSTOM_API_ID = re.compile(r"[a-z][a-z0-9_-]{1,31}")
@@ -173,7 +175,13 @@ def create_app(
     async def write_secret(payload: SecretPayload) -> dict[str, Any]:
         if not _allowed_secret_name(payload.name):
             raise HTTPException(status_code=400, detail="unknown secret name")
-        set_secret(payload.name, payload.value.strip())
+        value = payload.value.strip()
+        if payload.name == calendar_ics.SECRET_NAME and value:
+            try:
+                value = calendar_ics.validate_url(value)
+            except ValueError as exc:
+                raise HTTPException(status_code=400, detail=str(exc)) from exc
+        set_secret(payload.name, value)
         return {"saved": True, "status": secret_status(SECRET_NAMES)}
 
     @app.delete("/api/secrets/{name}")

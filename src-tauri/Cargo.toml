@@ -1,7 +1,7 @@
 [package]
 name = "veyra"
 version = "0.2.0"
-description = "Local-first AI assistant for Windows"
+description = "Local-first, proactive AI assistant for Windows"
 authors = ["Jaskirat"]
 license = "MIT"
 edition = "2021"

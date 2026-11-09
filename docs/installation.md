@@ -76,7 +76,7 @@ npm --prefix ui run build
 | `%APPDATA%\Veyra\veyra.db` | notes, chat history, timers, tool log | kept by default |
 | `%APPDATA%\Veyra\logs\` | rotating redacted logs | kept by default |
 | `%APPDATA%\Veyra\models\` | downloaded speech models | kept by default |
-| Windows Credential Manager | keys, app passwords and OAuth tokens | removed when the user deletes them in Settings |
+| Windows Credential Manager | keys, app passwords, calendar iCal URLs and OAuth tokens | removed when the user deletes them in Settings |
 
 Nothing is written into the installation directory. Settings → Privacy → “Delete my data” removes the Veyra folder and its credential entries after an explicit confirmation.
 

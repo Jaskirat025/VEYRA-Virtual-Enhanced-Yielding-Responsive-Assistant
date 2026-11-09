@@ -6,6 +6,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Added
+
+- **Read-only Calendar without OAuth.** `eventi_oggi` and `eventi_range` can read a secret Google Calendar iCal URL stored in Credential Manager. Recurring events, exclusions and overrides are expanded locally; creating events still requires OAuth.
+- **One-click Google sign-in.** Release builds embed a project-owned Google Desktop OAuth client, so users sign in from Settings instead of creating an API client or pasting client JSON. User tokens stay in Credential Manager. Gmail and Calendar are the current tool set.
+- **Proactive mode.** Optional local check-ins after an idle interval, plus spoken timer reminders. Proactive turns never use tools or external services and stay silent when there is nothing useful to say.
+
+### Security
+
+- Calendar feed URLs are HTTPS-only, redirect-free, size-limited and stored as secrets; they are never returned by the API.
+- The Google OAuth client is injected from repository secrets at build time and is git-ignored; no client JSON or refresh token is committed.
+
 ## [0.2.0] — 2026-11-09
 
 ### Added

@@ -1,6 +1,6 @@
 # VEYRA
 
-**Virtual Enhanced Yielding Responsive Assistant** — a local-first AI assistant for Windows.
+**Virtual Enhanced Yielding Responsive Assistant** — a local-first, proactive AI assistant for Windows.
 
 VEYRA is a desktop application, not a script: a frameless HUD window, a tray icon, an animated core, voice input and speech output, and an agentic tool layer that can actually operate your PC — while keeping as much processing as possible on your machine.
 
@@ -31,7 +31,8 @@ Why not three installers? One binary means one build to test, one signature, one
 - **Wake word → listen → transcribe → route → use tools → answer out loud.**
   Default wake word “Ehi Veyra”, changeable in Settings. Default name “Veyra”, also changeable.
 - **Local first.** A quantized 4B model through Ollama handles everyday requests with no network. Harder work can be escalated to an online model, with automatic fallback to the local one.
-- **Real tools, not chat only.** Open and close applications, control volume and brightness, take screenshots, read and move files, calculate with SymPy, run sandboxed Python, read GitHub issues and Gmail through a local app password (or OAuth), create calendar events, keep notes and timers.
+- **Proactive mode (optional).** After an idle interval VEYRA can offer one short local check-in and speak timer reminders aloud. Proactive turns never use tools or external services; enable it in Settings.
+- **Real tools, not chat only.** Open and close applications, control volume and brightness, take screenshots, read and move files, calculate with SymPy, run sandboxed Python, read GitHub issues, and use Gmail and Calendar through one-click Google sign-in. No per-user Google API setup; optional local Gmail and read-only iCal fallbacks remain available.
 - **WhatsApp without an unofficial client.** Prepare a message and open the official `wa.me` share page; the user reviews it and presses Send. VEYRA never automates a personal WhatsApp account.
 - **Any REST API as a tool.** Define custom endpoints for Exa, Claude, Gemini, internal services or anything else in Settings. The local model can use them after confirmation; keys stay in Credential Manager and definitions never contain code.
 - **Risk-aware execution.** Every tool declares `SAFE`, `CONFIRM` or `DANGEROUS`. Destructive actions always ask first, with a clear summary.
@@ -138,14 +139,15 @@ Nothing is written into the installation folder.
 | `%APPDATA%\Veyra\veyra.db` | SQLite: notes, chat history, timers, tool log |
 | `%APPDATA%\Veyra\logs\` | rotating local logs, redacted |
 | `%APPDATA%\Veyra\models\` | downloaded speech models, never committed |
-| Windows Credential Manager | API keys, app passwords, OAuth tokens, session secrets |
+| Windows Credential Manager | API keys, app passwords, calendar iCal URLs, OAuth tokens, session secrets |
 
 ---
 
 ## Security and privacy in one screen
 
 - Backend listens on **loopback only**, random port, token authenticated on every HTTP and WebSocket request; token regenerated each start.
-- **API keys, app passwords and OAuth tokens in Windows Credential Manager** via `keyring`, never in plain text, never logged.
+- **API keys, app passwords, calendar iCal URLs and OAuth tokens in Windows Credential Manager** via `keyring`, never in plain text, never logged.
+- **One-click Google OAuth**: the project-owned Desktop client is injected at build time; each user consents separately and tokens stay on the machine.
 - **Two-step tool risk model** with explicit confirmation dialogs, and a confirmation lockout after reading untrusted external content in the same turn.
 - **Prompt-injection aware ingestion**: mail, web and file content is wrapped in `<dati_esterni fonte="...">` blocks marked as data, not instructions.
 - **Custom APIs are explicit**: only configured base URLs are reachable, every call is `CONFIRM`, keys are stored separately, and responses are wrapped as external data.
@@ -193,7 +195,7 @@ Each source directory contains a `README.md` describing its planned layout until
 | 6 | Listening: VAD + faster-whisper + waveform | implemented, device test pending |
 | 7 | Wake word with openWakeWord | implemented, model training required |
 | 8 | Router with online model and offline fallback | implemented |
-| 9 | GitHub tools, Gmail (local app password or OAuth), Calendar OAuth, custom REST APIs | implemented, credentials required |
+| 9 | GitHub tools, one-click Google sign-in for Gmail and Calendar, optional local Gmail and read-only iCal fallbacks, custom REST APIs | implemented, maintainer Google client required |
 | 10 | Settings, onboarding, tool log, i18n EN/IT/ZH | implemented |
 | 11 | Python sandbox and UI automation tools | implemented, Windows test pending |
 | 12 | Installer, GitHub Actions release, final documentation | pipeline ready, Windows build pending |
@@ -209,7 +211,8 @@ Each phase ends with install commands, a manual test script, Windows troubleshoo
 - [Design system: tokens, type, motion, orb states](docs/design-system.md)
 - [Adding a tool](docs/adding-a-tool.md)
 - [Custom APIs: Exa, Claude, Gemini and any REST endpoint](docs/custom-apis.md)
-- [Creating your own Google credentials](docs/google-oauth.md)
+- [Google sign-in, Gmail and Calendar](docs/google-oauth.md)
+- [Proactive mode: local check-ins and spoken timers](docs/proactive-mode.md)
 
 ---
 

@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
+import time
 from typing import Any
 
 from fastapi import WebSocket, WebSocketDisconnect
@@ -17,6 +18,8 @@ from backend.config import SettingsStore
 from backend.memory.db import Database
 
 logger = logging.getLogger(__name__)
+
+REMINDER_PREFIX = {"en": "Reminder: ", "it": "Promemoria: ", "zh": "提醒："}
 
 
 class Session:
@@ -33,6 +36,9 @@ class Session:
         self.broker = broker
         self._send_lock = asyncio.Lock()
         self._task: asyncio.Task | None = None
+        self._proactive_job: asyncio.Task | None = None
+        self._last_activity = 0.0
+        self._closing = False
         self.conversation_id: str = ""
 
     async def emit(self, event: dict[str, Any]) -> None:
@@ -57,7 +63,9 @@ class Session:
         )
         await self.emit({"type": "state", "state": "idle", "detail": ""})
 
+        self._last_activity = time.monotonic()
         timer_task = asyncio.create_task(self._timer_watch())
+        proactive_task = asyncio.create_task(self._proactive_watch())
         try:
             while True:
                 payload = await self.websocket.receive_json()
@@ -67,7 +75,10 @@ class Session:
         except Exception:
             logger.exception("WebSocket session ended unexpectedly")
         finally:
+            self._closing = True
             timer_task.cancel()
+            proactive_task.cancel()
+            self._cancel_proactive_job()
             self.broker.cancel_all()
 
     async def _handle(self, payload: dict[str, Any]) -> None:
@@ -79,6 +90,7 @@ class Session:
             text = str(payload.get("text", "")).strip()
             if not text:
                 return
+            self._cancel_proactive_job()
             if self._task and not self._task.done():
                 await self.emit(
                     {"type": "error", "message": "Still working on the previous request."}
@@ -95,6 +107,7 @@ class Session:
             return
 
         if kind == "cancel":
+            self._cancel_proactive_job()
             if self._task and not self._task.done():
                 self._task.cancel()
             self.broker.cancel_all()
@@ -108,6 +121,7 @@ class Session:
         if kind == "start_listening":
             if self._task and not self._task.done():
                 return
+            self._cancel_proactive_job()
             self._task = asyncio.create_task(self._listen())
             return
 
@@ -115,6 +129,7 @@ class Session:
 
     async def _run_agent(self, text: str) -> None:
         settings = self.settings_store.load()
+        self._last_activity = time.monotonic()
         self.conversation_id = self.db.ensure_conversation(
             self.conversation_id or None, title=text[:60]
         )
@@ -191,10 +206,67 @@ class Session:
         await self.emit({"type": "state", "state": "idle", "detail": ""})
         await self._run_agent(text)
 
+    def _cancel_proactive_job(self) -> None:
+        job = self._proactive_job
+        if job and not job.done():
+            job.cancel()
+
+    async def _proactive_watch(self) -> None:
+        try:
+            while True:
+                await asyncio.sleep(15)
+                settings = self.settings_store.load()
+                if not settings.proactive.enabled or not self.conversation_id:
+                    continue
+                if self._task and not self._task.done():
+                    continue
+                idle_for = time.monotonic() - self._last_activity
+                if idle_for < settings.proactive.interval_minutes * 60:
+                    continue
+
+                job = asyncio.create_task(self._proactive_check_in(settings))
+                self._proactive_job = job
+                try:
+                    await job
+                except asyncio.CancelledError:
+                    if self._closing:
+                        raise
+                    continue
+                finally:
+                    self._proactive_job = None
+                    self._last_activity = time.monotonic()
+        except asyncio.CancelledError:
+            return
+        except Exception:
+            logger.exception("Proactive watcher stopped")
+
+    async def _proactive_check_in(self, settings) -> None:
+        history = self.db.recent_messages(self.conversation_id, limit=8)
+        if not history:
+            return
+        agent = Agent(settings, self.db, self.emit, self.broker)
+        text = await agent.proactive(history)
+        if not text:
+            return
+        self.db.add_message(self.conversation_id, "assistant", text)
+        await self.emit(
+            {
+                "type": "transcript",
+                "data": {
+                    "role": "assistant",
+                    "text": text,
+                    "conversation_id": self.conversation_id,
+                },
+            }
+        )
+        if settings.voice.speak_replies:
+            await self.emit({"type": "speak", "data": {"text": text}})
+
     async def _timer_watch(self) -> None:
         try:
             while True:
                 await asyncio.sleep(15)
+                settings = self.settings_store.load()
                 for timer in self.db.due_timers():
                     self.db.complete_timer(int(timer["id"]))
                     await self.emit(
@@ -203,6 +275,16 @@ class Session:
                             "data": {"label": timer["label"], "id": timer["id"]},
                         }
                     )
+                    if settings.voice.speak_replies:
+                        prefix = REMINDER_PREFIX.get(
+                            settings.interface.language, REMINDER_PREFIX["en"]
+                        )
+                        await self.emit(
+                            {
+                                "type": "speak",
+                                "data": {"text": f"{prefix}{timer['label']}"},
+                            }
+                        )
         except asyncio.CancelledError:
             return
         except Exception:

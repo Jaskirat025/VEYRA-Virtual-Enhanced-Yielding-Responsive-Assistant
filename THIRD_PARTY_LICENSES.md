@@ -2,7 +2,7 @@
 
 VEYRA ships only components whose licenses allow redistribution in an MIT-licensed application. This file records the planned inventory and the policy for adding to it.
 
-> **Status:** current inventory for 0.2.0. Dependency versions are pinned in `backend/requirements*.txt`, `ui/package-lock.json`, `package-lock.json` and `src-tauri/Cargo.toml`. Before the first public release this file is regenerated from a machine-readable audit (`pip-licenses`, `cargo-license`, `license-checker`) and reviewed by hand.
+> **Status:** current inventory for the current development tree. Dependency versions are pinned in `backend/requirements*.txt`, `ui/package-lock.json`, `package-lock.json` and `src-tauri/Cargo.toml`. Before the first public release this file is regenerated from a machine-readable audit (`pip-licenses`, `cargo-license`, `license-checker`) and reviewed by hand.
 
 ## Policy
 
@@ -53,6 +53,10 @@ No icon font is planned; icons are inline SVG drawn in-house to keep the bundle 
 | Pydantic | Schema validation | MIT | |
 | websockets | WebSocket transport | BSD-3-Clause | |
 | HTTPX | HTTP client for providers | BSD-3-Clause | replaces PyGithub to avoid LGPL |
+| icalendar | iCalendar parsing for read-only calendar feeds | BSD-2-Clause | |
+| python-dateutil | Recurrence expansion for iCalendar events | Apache-2.0 OR BSD-3-Clause | |
+| tzdata | IANA timezone data on Windows | Apache-2.0 | transitive via icalendar |
+| six | Python compatibility for dateutil | MIT | transitive |
 | python-dotenv | Developer `.env` loading | BSD-3-Clause | end users never need it |
 | keyring | Windows Credential Manager access | MIT | |
 | Ollama | Local model runtime | MIT | installed separately by the user, not bundled |
@@ -97,7 +101,7 @@ No icon font is planned; icons are inline SVG drawn in-house to keep the bundle 
 | --- | --- | --- | --- |
 | GitHub REST API | Repository, issue and commit tools | API terms of service | called with the user's personal token; no client library shipped |
 | google-api-python-client | Gmail and Calendar tools | Apache-2.0 | |
-| google-auth, google-auth-oauthlib | Google OAuth flow | Apache-2.0 | each user creates their own OAuth client |
+| google-auth, google-auth-oauthlib | Google OAuth flow | Apache-2.0 | project-owned client injected at build time |
 | Mercury 3 (Inception Labs) | Optional online model | Commercial API | not redistributed; used only with the user's own key and explicit opt-in |
 
 ## Installer and build tooling

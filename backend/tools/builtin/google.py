@@ -8,11 +8,11 @@ from __future__ import annotations
 
 import base64
 import json
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 from email.mime.text import MIMEText
 
 from backend.context import get_context
-from backend.integrations import gmail_local
+from backend.integrations import calendar_ics, gmail_local
 from backend.secrets import get_secret
 from backend.tools.external import wrap_external
 from backend.tools.registry import Category, Risk, ToolError, tool
@@ -232,10 +232,13 @@ def eventi_oggi() -> str:
 
     Use when the user asks what is scheduled today.
     """
-    service = _build("calendar", "v3")
-    now = datetime.now(UTC)
+    if calendar_ics.configured():
+        return calendar_ics.today_events()
+
+    now = datetime.now().astimezone()
     start = now.replace(hour=0, minute=0, second=0, microsecond=0)
     end = start + timedelta(days=1)
+    service = _build("calendar", "v3")
     try:
         response = (
             service.events()
@@ -266,12 +269,23 @@ def eventi_range(inizio: str, fine: str) -> str:
         inizio: ISO date or datetime, for example "2026-11-10".
         fine: ISO date or datetime, for example "2026-11-17".
     """
-    service = _build("calendar", "v3")
     try:
         start = datetime.fromisoformat(inizio.strip())
         end = datetime.fromisoformat(fine.strip())
     except ValueError as exc:
         raise ToolError("Dates must be ISO, for example 2026-11-10.") from exc
+    zone = datetime.now().astimezone().tzinfo
+    if zone is None:
+        raise ToolError("The local timezone is unavailable.")
+    if start.tzinfo is None:
+        start = start.replace(tzinfo=zone)
+    if end.tzinfo is None:
+        end = end.replace(tzinfo=zone)
+    if end <= start:
+        raise ToolError("The end must be after the start.")
+    if calendar_ics.configured():
+        return calendar_ics.events_between(start, end)
+    service = _build("calendar", "v3")
     try:
         response = (
             service.events()
@@ -305,6 +319,11 @@ def crea_evento(titolo: str, inizio: str, fine: str) -> str:
         inizio: ISO datetime, for example "2026-11-10T15:00:00".
         fine: ISO datetime, for example "2026-11-10T16:00:00".
     """
+    if calendar_ics.configured() and not get_secret("google_token_json"):
+        raise ToolError(
+            "Calendar is configured read-only through its secret iCal URL. "
+            "Creating events requires the Google OAuth connection."
+        )
     _require_write("Calendar")
     service = _build("calendar", "v3")
     try:

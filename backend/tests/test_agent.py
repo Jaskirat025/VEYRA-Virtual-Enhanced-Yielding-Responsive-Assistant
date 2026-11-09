@@ -142,6 +142,21 @@ def test_unknown_tool_is_rejected(database, context):
     assert "Unknown tool" in database.tool_log()[-1]["error"]
 
 
+def test_proactive_check_in_can_speak_or_stay_silent(database, context):
+    events = []
+    provider = ScriptedProvider(
+        [
+            LLMResponse(text="  You left the router note open.  "),
+            LLMResponse(text="[SILENT]"),
+        ]
+    )
+    agent = build_agent(database, events, provider)
+    history = [{"role": "user", "content": "I need to finish the router note."}]
+
+    assert asyncio.run(agent.proactive(history)) == "You left the router note open."
+    assert asyncio.run(agent.proactive(history)) is None
+
+
 def test_external_content_detection():
     agent = Agent(AppSettings(), None, None, ConfirmBroker())  # type: ignore[arg-type]
     messages = [{"role": "tool", "content": "<dati_esterni fonte='gmail'>hello</dati_esterni>"}]

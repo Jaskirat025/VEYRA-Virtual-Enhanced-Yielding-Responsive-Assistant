@@ -49,7 +49,9 @@ Reporters are credited in the advisory unless they ask to stay anonymous.
 | --- | --- |
 | Transport | Backend binds to `127.0.0.1` only, on a random free port chosen at startup |
 | Authentication | Per-run session token, required on every HTTP request and WebSocket message; regenerated on each start |
-| Secrets at rest | API keys, app passwords and OAuth tokens in Windows Credential Manager through `keyring`; never in `config.json`, never logged |
+| Secrets at rest | API keys, app passwords, calendar iCal URLs and OAuth tokens in Windows Credential Manager through `keyring`; never in `config.json`, never logged |
+| Google OAuth client | Project-owned Desktop client injected at build time from repository secrets; the generated client file is git-ignored and never committed |
+| Proactive mode | Optional, off by default; uses only the local model and recent local chat history, with no tool access or external services |
 | Tool risk | Every tool declares `SAFE`, `CONFIRM` or `DANGEROUS`; confirmation is required in the UI and, for high risk, summarized before execution |
 | Prompt injection | External content (mail, web, files) is wrapped in `<dati_esterni fonte="...">` blocks and marked as data; after such content is read in a turn, `CONFIRM`/`DANGEROUS` tools stay blocked until the user confirms |
 | Custom APIs | Definitions are validated to http(s), cannot contain credentials, auth headers or traversal paths; keys stay in Credential Manager; every call is `CONFIRM`; responses are wrapped as external data; the model cannot choose an arbitrary URL |

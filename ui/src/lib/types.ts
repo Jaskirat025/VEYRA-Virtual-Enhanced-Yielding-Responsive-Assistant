@@ -22,6 +22,11 @@ export interface VoiceSettings {
   speak_replies: boolean;
 }
 
+export interface ProactiveSettings {
+  enabled: boolean;
+  interval_minutes: number;
+}
+
 export interface AudioSettings {
   input_device: number | null;
   stt_model: string;
@@ -68,6 +73,7 @@ export interface Settings {
   system_prompt: string;
   models: ModelSettings;
   voice: VoiceSettings;
+  proactive: ProactiveSettings;
   audio: AudioSettings;
   integrations: IntegrationSettings;
   interface: InterfaceSettings;

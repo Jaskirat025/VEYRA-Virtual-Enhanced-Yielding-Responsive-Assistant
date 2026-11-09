@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from backend.brain.llm import LLMError, LLMResponse, ToolInvocation
-from backend.brain.prompts import build_messages
+from backend.brain.prompts import build_messages, build_proactive_messages
 from backend.brain.router import Router
 from backend.config import AppSettings
 from backend.memory.db import Database
@@ -277,6 +277,23 @@ class Agent:
 
         await self.emit({"type": "state", "state": "speaking", "detail": ""})
         return AgentResult(text=final_text, steps=steps, used_online=used_online)
+
+    async def proactive(self, history: list[dict[str, Any]]) -> str | None:
+        """Return one short unprompted check-in, or None when silence is better."""
+        if not history:
+            return None
+        messages = build_proactive_messages(self.settings, history)
+        provider = self.router.provider_for("")
+        try:
+            response = await provider.chat(messages, [])
+        except LLMError:
+            logger.info("Proactive check-in skipped: the local model is unavailable")
+            return None
+
+        text = " ".join(response.text.split()).strip()
+        if not text or text.strip(" .").upper() in {"[SILENT]", "SILENT"}:
+            return None
+        return text if len(text) <= 240 else text[:237].rstrip() + "..."
 
     def _external_read(self, messages: list[dict[str, Any]]) -> bool:
         return any(

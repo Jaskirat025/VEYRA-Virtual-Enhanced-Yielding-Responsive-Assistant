@@ -44,9 +44,9 @@ export function SettingsScreen() {
   const [secretKind, setSecretKind] = useState<"online_api_key" | "github_token">(
     "online_api_key",
   );
-  const [googleClient, setGoogleClient] = useState("");
   const [googleWrite, setGoogleWrite] = useState(false);
   const [gmailPassword, setGmailPassword] = useState("");
+  const [calendarIcsUrl, setCalendarIcsUrl] = useState("");
   const [customApisText, setCustomApisText] = useState("[]");
   const [customApiKeys, setCustomApiKeys] = useState<Record<string, string>>({});
 
@@ -60,7 +60,7 @@ export function SettingsScreen() {
   }
 
   const patchGroup = (
-    group: "models" | "voice" | "audio" | "integrations" | "interface",
+    group: "models" | "voice" | "proactive" | "audio" | "integrations" | "interface",
     key: string,
     value: unknown,
   ) => {
@@ -91,6 +91,7 @@ export function SettingsScreen() {
         system_prompt: draft.system_prompt,
         models: draft.models,
         voice: draft.voice,
+        proactive: draft.proactive,
         audio: draft.audio,
         integrations: draft.integrations,
         interface: draft.interface,
@@ -141,6 +142,24 @@ export function SettingsScreen() {
     }
   };
 
+  const saveCalendarIcs = async () => {
+    if (!backend) return;
+    const value = calendarIcsUrl.trim();
+    setMessage(null);
+    try {
+      await apiFetch(backend, "/api/secrets", {
+        method: "POST",
+        body: JSON.stringify({ name: "calendar_ics_url", value }),
+      });
+      setCalendarIcsUrl("");
+      setMessage(
+        value ? t("settings.calendarIcsSaved") : t("settings.calendarIcsRemoved"),
+      );
+    } catch (error) {
+      setMessage((error as Error).message);
+    }
+  };
+
   const saveCustomApiKey = async (id: string) => {
     if (!backend) return;
     const value = (customApiKeys[id] ?? "").trim();
@@ -171,17 +190,10 @@ export function SettingsScreen() {
   const connectGoogle = async () => {
     if (!backend) return;
     try {
-      if (googleClient.trim()) {
-        const parsed = JSON.parse(googleClient) as Record<string, unknown>;
-        await apiFetch(backend, "/api/google/client", {
-          method: "POST",
-          body: JSON.stringify(parsed),
-        });
-      }
       await apiFetch(backend, `/api/google/connect?allow_write=${googleWrite}`, {
         method: "POST",
       });
-      setMessage("Google account connected.");
+      setMessage(t("settings.googleConnected"));
     } catch (error) {
       setMessage((error as Error).message);
     }
@@ -480,14 +492,30 @@ export function SettingsScreen() {
             {t("settings.saveGmail")}
           </button>
           <div className="vy-hairline" />
-          <Field label="Google OAuth client JSON (Calendar / drafts)">
-            <textarea
-              className="vy-field min-h-[76px] resize-y font-mono text-[11px]"
-              value={googleClient}
-              placeholder={'"installed": { "client_id": "…" }'}
-              onChange={(event) => setGoogleClient(event.target.value)}
+          <Field label={t("settings.calendarIcsUrl")}>
+            <input
+              type="password"
+              autoComplete="off"
+              className="vy-field"
+              value={calendarIcsUrl}
+              onChange={(event) => setCalendarIcsUrl(event.target.value)}
+              placeholder="https://calendar.google.com/calendar/ical/…/basic.ics"
             />
           </Field>
+          <p className="text-[11px] leading-relaxed text-silver-500">
+            {t("settings.calendarIcsHint")}
+          </p>
+          <button
+            type="button"
+            className="vy-btn"
+            onClick={() => void saveCalendarIcs()}
+          >
+            {t("settings.saveCalendarIcs")}
+          </button>
+          <div className="vy-hairline" />
+          <p className="text-[11px] leading-relaxed text-silver-500">
+            {t("settings.googleSignInHint")}
+          </p>
           <label className="flex items-center gap-3 text-sm text-silver-300">
             <input
               type="checkbox"
@@ -495,7 +523,7 @@ export function SettingsScreen() {
               checked={googleWrite}
               onChange={(event) => setGoogleWrite(event.target.checked)}
             />
-            Request write scopes
+            {t("settings.googleWrite")}
           </label>
           <button type="button" className="vy-btn" onClick={() => void connectGoogle()}>
             {t("settings.connectGoogle")}
@@ -530,6 +558,35 @@ export function SettingsScreen() {
             />
             {t("settings.lowPower")}
           </label>
+        </Section>
+
+        <Section title={t("settings.proactive")}>
+          <label className="flex items-center gap-3 text-sm text-silver-300">
+            <input
+              type="checkbox"
+              className="h-4 w-4 accent-[var(--vy-accent-500)]"
+              checked={draft.proactive.enabled}
+              onChange={(event) =>
+                patchGroup("proactive", "enabled", event.target.checked)
+              }
+            />
+            {t("settings.proactiveEnabled")}
+          </label>
+          <Field label={t("settings.proactiveInterval")}>
+            <input
+              type="number"
+              className="vy-field"
+              min={5}
+              max={240}
+              value={draft.proactive.interval_minutes}
+              onChange={(event) =>
+                patchGroup("proactive", "interval_minutes", Number(event.target.value))
+              }
+            />
+          </Field>
+          <p className="text-[11px] leading-relaxed text-silver-500">
+            {t("settings.proactiveHint")}
+          </p>
         </Section>
 
         <Section title={t("settings.permissions")}>

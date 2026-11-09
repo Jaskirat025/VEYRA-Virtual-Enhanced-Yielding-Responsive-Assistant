@@ -56,6 +56,12 @@ def test_partial_update_merges(tmp_path):
     assert updated.models.local_model == "qwen3:4b"
 
 
+def test_proactive_defaults_are_off_and_bounded():
+    settings = AppSettings()
+    assert settings.proactive.enabled is False
+    assert settings.proactive.interval_minutes == 30
+
+
 def test_tool_permissions_default_to_enabled():
     settings = AppSettings(tool_permissions={"elimina_file": False})
     assert settings.tool_enabled("elimina_file") is False

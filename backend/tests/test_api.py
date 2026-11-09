@@ -92,6 +92,29 @@ def test_gmail_app_password_secret_is_accepted(tmp_path):
     assert "example-app-password" not in response.text
 
 
+def test_calendar_ics_secret_is_accepted_and_validated(tmp_path):
+    calendar_url = "https://calendar.google.com/calendar/ical/example/basic.ics"
+    with make_client(tmp_path) as client:
+        saved = client.post(
+            "/api/secrets",
+            headers=headers(),
+            json={"name": "calendar_ics_url", "value": calendar_url},
+        )
+        assert saved.status_code == 200
+        assert saved.json()["status"]["calendar_ics_url"] is True
+        assert calendar_url not in saved.text
+
+        rejected = client.post(
+            "/api/secrets",
+            headers=headers(),
+            json={"name": "calendar_ics_url", "value": "http://example.invalid/calendar.ics"},
+        )
+        assert rejected.status_code == 400
+
+        removed = client.delete("/api/secrets/calendar_ics_url", headers=headers())
+        assert removed.json()["status"]["calendar_ics_url"] is False
+
+
 def test_custom_api_secret_is_accepted(tmp_path):
     with make_client(tmp_path) as client:
         response = client.post(

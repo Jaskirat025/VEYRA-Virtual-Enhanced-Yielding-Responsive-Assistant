@@ -44,6 +44,11 @@ class VoiceSettings(BaseModel):
     speak_replies: bool = True
 
 
+class ProactiveSettings(BaseModel):
+    enabled: bool = False
+    interval_minutes: int = Field(default=30, ge=5, le=240)
+
+
 class AudioSettings(BaseModel):
     input_device: int | None = None
     stt_model: str = "base"
@@ -178,6 +183,7 @@ class AppSettings(BaseModel):
     system_prompt: str = ""
     models: ModelSettings = Field(default_factory=ModelSettings)
     voice: VoiceSettings = Field(default_factory=VoiceSettings)
+    proactive: ProactiveSettings = Field(default_factory=ProactiveSettings)
     audio: AudioSettings = Field(default_factory=AudioSettings)
     integrations: IntegrationSettings = Field(default_factory=IntegrationSettings)
     interface: InterfaceSettings = Field(default_factory=InterfaceSettings)

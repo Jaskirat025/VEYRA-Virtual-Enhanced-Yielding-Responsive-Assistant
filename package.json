@@ -2,7 +2,7 @@
   "name": "veyra",
   "private": true,
   "version": "0.2.0",
-  "description": "Local-first AI assistant for Windows",
+  "description": "Local-first, proactive AI assistant for Windows",
   "author": "Jaskirat",
   "license": "MIT",
   "scripts": {

@@ -115,7 +115,7 @@ Runtime code generation is intentionally not part of this flow. A new protocol t
 ## Settings and permissions
 
 - Every tool has an on/off switch in Settings → Permissions, grouped by category.
-- Integrations (GitHub, Google) are off until configured; read-only is the default. Gmail can use a local Google app password; Calendar and Gmail drafts still use OAuth.
+- Integrations (GitHub, Google) are off until configured; read-only is the default. Google sign-in uses the project-owned OAuth client shipped with the build; Gmail can also use a local app password, and Calendar reads can use a secret iCal feed.
 - Custom APIs are user-defined JSON, limited to 20 entries, and remain disabled from the model's tool list until the definition is saved and enabled.
 - Disabled tools are removed from the model's tool list, and calling one is an error, never an execution.
 - Per-tool last-used time and error count are visible in the tool log.

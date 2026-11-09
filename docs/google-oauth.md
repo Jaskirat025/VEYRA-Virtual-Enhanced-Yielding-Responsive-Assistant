@@ -1,108 +1,149 @@
-# Google access: Gmail locally, Calendar with OAuth
+# Google sign-in, Gmail and Calendar
 
-> **Status:** Gmail can use a Google App Password over IMAP/SMTP, with no OAuth client. Calendar and Gmail drafts still require an OAuth client. VEYRA never ships shared Google credentials; every user connects their own account.
+> **Status:** VEYRA ships a project-owned Google Desktop OAuth client. Users choose **Settings → Accounts → Sign in with Google** and consent in the browser; they do not create an API key, an OAuth client or a JSON file. The refresh token stays in Windows Credential Manager. Current tools cover Gmail and Calendar. Other Google services and third-party apps are separate integrations, described below.
 
-## Gmail without OAuth
+## What the user does
 
-Google requires an explicit credential for mail access; an account name alone is not enough. For Gmail, VEYRA supports an App Password:
+1. Install VEYRA and open **Settings → Accounts**.
+2. Leave write access disabled for read-only use, or enable it to allow Gmail drafts/sending and Calendar event creation.
+3. Choose **Sign in with Google**.
+4. Complete Google's consent screen in the default browser. VEYRA listens only on a random loopback port for the callback.
+5. Return to VEYRA. The account is connected when the app reports success.
 
-1. Open your Google Account security settings and enable **2-Step Verification**. App passwords are unavailable without it.
-2. Open **Security → App passwords**, create one named `Veyra`, and copy the generated value.
-3. In VEYRA, open **Settings → Accounts**.
-4. Enter your Gmail address and the app password in the local Gmail fields, then choose **Save local Gmail**.
-5. Send a test request such as “search my latest mail”. VEYRA uses IMAP and SMTP directly.
+No cloud relay is involved: the local FastAPI backend on `127.0.0.1` completes the loopback flow. The OAuth client identifies the VEYRA application; each user still consents separately, and their access can be revoked at any time from the Google account's third-party access page.
 
-The app password is stored in **Windows Credential Manager**, not in `config.json`, and is never returned by the API. It is separate from your normal Google password; revoke it from the same Google page if you stop using VEYRA.
+The write checkbox requests the write scopes during sign-in. Change it and sign in again to change the granted scopes. The separate Google read-only setting controls whether the tools are allowed to perform write actions.
 
-This local path supports:
+## What is covered
 
-- searching Gmail with Gmail's IMAP query syntax;
-- reading a message by the id returned by search;
-- sending plain-text mail, after the read-only setting is disabled and the action is confirmed.
+| Area | Read | Create/write | Authentication |
+| --- | --- | --- | --- |
+| Gmail | Search and read messages | Drafts and send | Google OAuth with the project client |
+| Calendar | Today and date-range events | Create events | Google OAuth with the project client |
+| Gmail fallback | Search and read over IMAP | Send over SMTP | Google App Password |
+| Calendar fallback | Today and date-range events | Not available | Secret iCal URL (read-only) |
 
-It does **not** support Gmail drafts or Google Calendar. Those use OAuth, described below. If your Google Workspace administrator has disabled app passwords, use OAuth instead.
+The local Gmail and iCal paths are optional. When configured, Gmail tools prefer the local account and Calendar reads prefer the iCal feed. OAuth is still required for Gmail drafts, Gmail send through the API path and Calendar creation.
 
-## Why Calendar and drafts need OAuth
+## What one Google login does not cover
 
-Calendar data is not available through the Gmail app-password path. Draft creation is also outside the local IMAP flow. Both need a Google OAuth client that belongs to the user, so no shared secret is shipped in this repository.
+- **Other Google services are not enabled by this release.** Drive, Contacts, Tasks, Docs and Sheets need their own scopes and tool implementations. They are not silently requested by the Gmail/Calendar consent.
+- **Third-party apps have their own authorization.** A Google login cannot grant access to Slack, Notion, Outlook, Dropbox or any other provider. Each provider needs a separate OAuth app, scopes and consent screen. There is no universal "all apps" login.
+- **No one-click login can create a server-side private tunnel to Google.** The local loopback backend is the broker; the user's Google account remains protected by Google's consent and token rules.
 
-The free tier is enough for personal use.
+Adding a provider later means adding its scopes, tools and tests one at a time; it must not be simulated by reusing Google credentials.
 
-## Step 1 — Create a Google Cloud project
+## For maintainers: create the project client
 
-1. Open the Google Cloud Console and create a new project, for example `veyra-personal`.
-2. Keep it selected for the rest of these steps.
+The client must belong to the VEYRA project, not to each user. Create it once, then inject it into release builds.
 
-## Step 2 — Enable the APIs
+### 1. Create a Google Cloud project
+
+1. Open the Google Cloud Console and create a project, for example `veyra-app`.
+2. Keep it selected for the remaining steps.
+
+### 2. Enable the APIs
 
 In **APIs & Services → Library**, enable:
 
-- **Gmail API** (for OAuth Gmail drafts)
+- **Gmail API**
 - **Google Calendar API**
 
-Both are free at personal volumes.
-
-## Step 3 — Configure the OAuth consent screen
+### 3. Configure the OAuth consent screen
 
 1. Open **APIs & Services → OAuth consent screen**.
-2. Choose **External** as the user type.
-3. Fill in the app name (`Veyra`), your own support contact, and the developer contact. These are your details, not the project's.
-4. Leave the app in **Testing** mode and add your own Google account under **Test users**. Testing mode is sufficient for personal use.
-5. Add only the scopes VEYRA needs:
+2. Choose **External**.
+3. Set the app name (`VEYRA`), a support contact and a developer contact.
+4. Add the scopes in the table below.
+5. While testing, add test accounts under **Test users**. Testing mode is limited to 100 users and refresh tokens expire after 7 days.
 
-| Scope | Purpose | When |
-| --- | --- | --- |
-| `https://www.googleapis.com/auth/gmail.readonly` | search and read mail through OAuth | optional if local Gmail is used |
-| `https://www.googleapis.com/auth/calendar.readonly` | list today's and ranged events | Calendar read-only |
-| `https://www.googleapis.com/auth/gmail.compose` | create drafts | only if you enable drafts |
-| `https://www.googleapis.com/auth/gmail.send` | send mail through OAuth | optional, write access |
-| `https://www.googleapis.com/auth/calendar.events` | create events | optional, write access |
-
-Start with the read-only scopes. Write scopes are unnecessary for reading and can be added later.
-
-## Step 4 — Create the OAuth client
+### 4. Create the OAuth client
 
 1. Open **APIs & Services → Credentials → Create credentials → OAuth client ID**.
-2. Application type: **Desktop app**.
-3. Name it `Veyra desktop`.
-4. Create it, then download the JSON file.
+2. Choose **Desktop app**.
+3. Name it `VEYRA desktop` and create it.
+4. Download the JSON only to inject it into the build; do not commit it.
 
-Desktop clients use a loopback redirect, which is why VEYRA can complete the flow on `127.0.0.1` with a random port without a public HTTPS endpoint. Do not create a Web application client.
+Desktop clients use a loopback redirect, so no public HTTPS callback is required.
 
-## Step 5 — Import the OAuth client into VEYRA
+### 5. Scopes
 
-1. Open **Settings → Accounts → Google OAuth**.
-2. Paste the downloaded client JSON and choose **Connect Google**.
-3. VEYRA stores the client secret plus refresh token in **Windows Credential Manager**. The JSON file itself is never committed to the project.
-4. Choose **Sign in** and complete the Google consent screen in your browser.
-5. Grant the read-only scopes first. Write permissions are requested separately if you enable them.
+| Scope | Purpose | Sensitivity |
+| --- | --- | --- |
+| `https://www.googleapis.com/auth/gmail.readonly` | Search and read mail | Restricted |
+| `https://www.googleapis.com/auth/calendar.readonly` | Read events | Sensitive |
+| `https://www.googleapis.com/auth/gmail.compose` | Create drafts | Restricted |
+| `https://www.googleapis.com/auth/gmail.send` | Send mail | Restricted |
+| `https://www.googleapis.com/auth/calendar.events` | Create events | Sensitive |
 
-Local Gmail and OAuth Gmail can coexist. When a local Gmail address and app password are configured, Gmail tools use the local path; Calendar and drafts still use OAuth.
+Request only the scopes the shipped tools use. Do not add Drive, Contacts or Tasks scopes until their tools exist; Google's scope-minimization policy expects the consent to match the functionality.
 
-## Notes and limitations
+### 6. Inject the client at build time
 
-- **Testing mode refresh tokens expire after 7 days.** Google invalidates refresh tokens for external apps that are still in Testing. You will need to sign in again, or publish the app (which requires Google verification for sensitive scopes). For personal use the simplest option is to re-authorize when VEYRA reports an expired token.
-- Unverified apps show a “Google hasn't verified this app” warning. Continue only because you created the client yourself.
-- You can revoke access at any time from your Google account's third-party access page. Deleting the VEYRA entry there invalidates the stored token immediately.
-- VEYRA requests no profile or drive scopes, and it does not upload mail content anywhere unless you explicitly send a request to an online model.
-- Read-only mode is the default. `bozza_mail` is `SAFE` in the tool registry but still requires write access, while `invia_mail` and `crea_evento` are `CONFIRM`.
+Local development: set these in the environment used to start the backend (the shell or your launcher):
+
+```dotenv
+VEYRA_GOOGLE_CLIENT_ID=000000000000-example.apps.googleusercontent.com
+VEYRA_GOOGLE_CLIENT_SECRET=example-not-a-real-secret
+```
+
+The values above are fake placeholders. Do not commit real values; `.env` and `backend/google_client.json` are git-ignored. Without them and without a local client file, the button reports that sign-in is not configured.
+
+Release builds use repository secrets named `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`. The Windows workflow writes `backend/google_client.json` from those secrets, then packages it into the PyInstaller sidecar with `--add-data`. The generated file is git-ignored and must never be committed. If either secret is missing, the release build fails instead of shipping a broken sign-in button.
+
+The OAuth client is shared by all installs of the VEYRA build. It does not contain user tokens and does not grant access without each user's consent.
+
+### 7. Verification and release limits
+
+- **Gmail uses restricted scopes.** A public app that uses Gmail requires Google OAuth verification and an annual CASA security assessment. Budget for this before distributing broadly.
+- **Calendar uses sensitive scopes.** Verification is required for public distribution as well.
+- In **Testing** mode the app is limited to 100 users and refresh tokens expire after 7 days. Re-authenticate when VEYRA reports an expired token.
+- An unverified app shows Google's "Google hasn't verified this app" warning. Users should continue only if they trust the build.
+- Google may require a privacy policy, homepage and domain ownership verification during review.
+
+## Security model
+
+- The OAuth client and user refresh tokens are not in `config.json`; tokens are stored in Windows Credential Manager.
+- The local backend binds to `127.0.0.1`, uses a per-run session token and never exposes the OAuth callback to the network.
+- A Desktop client secret is extractable from any desktop binary; it identifies the application, not the user, and is not a substitute for user consent. Keeping it out of the repository and injecting it at build time avoids publishing it in source and CI logs.
+- The generated `backend/google_client.json` and all `.env` files are git-ignored. Do not paste real values into issues, pull requests, screenshots or chat.
+
+## Optional local fallbacks
+
+### Gmail App Password
+
+1. Enable **2-Step Verification** in the Google Account.
+2. Open **Security → App passwords**, create one named `Veyra` and copy it.
+3. In VEYRA, open **Settings → Accounts**, enter the Gmail address and app password, then choose **Save local Gmail**.
+
+The app password is stored in Credential Manager and is never returned by the API. It supports IMAP search/read and SMTP send, but not drafts. Workspace administrators can disable app passwords; use Google sign-in in that case.
+
+### Read-only Calendar iCal URL
+
+1. In Google Calendar, open **Settings → Settings for my calendars**, select the calendar and open **Integrate calendar**.
+2. Copy the **Secret address in iCal format**.
+3. Paste it into **Settings → Accounts → Calendar secret iCal URL** and choose **Save calendar URL**.
+
+The URL is a bearer secret stored in Credential Manager. VEYRA fetches it over HTTPS only, rejects redirects, limits the response size and never returns the URL from the API. It supports today and ranged reads, recurring events and exceptions, but cannot create or change events. Save an empty URL to remove it.
 
 ## Troubleshooting
 
 | Symptom | Cause | Fix |
 | --- | --- | --- |
-| `access_denied` during consent | account not in Test users | add it under OAuth consent screen |
-| `invalid_client` | wrong client type or imported file | recreate as a Desktop app client |
-| Token expires weekly | app in Testing mode | re-authorize, or publish the app |
-| `insufficient permissions` | write scope missing | re-run consent with the scope enabled |
-| Redirect mismatch | Web client used instead of Desktop | create a Desktop client |
-| `quota exceeded` | shared or heavily used project | create a dedicated project for VEYRA |
-| App password rejected | 2-Step Verification or Workspace policy | enable 2-Step Verification, or use OAuth |
-| Gmail login failed | wrong address or revoked app password | regenerate the app password in Google Account |
+| "Google sign-in is not configured in this build" | release secrets missing, or local environment not set | set `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` for the release, or the `VEYRA_*` values locally |
+| `access_denied` during consent | account is not a test user while the consent screen is in Testing | add the account under **Test users**, or publish the app |
+| `invalid_client` | wrong client type or wrong client values | recreate a **Desktop app** client and inject its values again |
+| `redirect_uri_mismatch` | a Web client was used | use a Desktop client; the loopback port is chosen automatically |
+| `insufficient permissions` | read-only sign-in, then a write action | enable write access and sign in again |
+| Token stops working after a week | app is in Testing | sign in again, or complete verification and publish |
+| Gmail tools use the wrong path | a local Gmail address is also configured | clear the local Gmail address/app password to force OAuth, or keep the local path intentionally |
+| Calendar create fails | only the read-only iCal URL is configured | connect Google with write access; iCal cannot write |
+| `quota exceeded` | shared or heavily used Google Cloud project | use the VEYRA project's quota responsibly, or request an increase |
 
 ## Never do this
 
-- Do not commit the downloaded JSON, a client secret, a refresh token, an app password or a screenshot containing them.
+- Do not commit a client JSON, client secret, refresh token, app password, secret iCal URL or screenshot containing one.
 - Do not paste credentials into issues, pull requests or chat.
-- Do not disable OAuth security settings to make the flow “simpler”.
-- Do not use unofficial WhatsApp, Gmail or Google session-cookie automation.
+- Do not disable OAuth security settings to make the flow simpler.
+- Do not automate Google session cookies or use an unofficial Gmail/Calendar client.
+- Do not request scopes that no shipped tool uses.
