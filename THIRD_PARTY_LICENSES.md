@@ -2,7 +2,7 @@
 
 VEYRA ships only components whose licenses allow redistribution in an MIT-licensed application. This file records the planned inventory and the policy for adding to it.
 
-> **Status:** current inventory for 0.1.0. Dependency versions are pinned in `backend/requirements*.txt`, `ui/package-lock.json`, `package-lock.json` and `src-tauri/Cargo.toml`. Before the first public release this file is regenerated from a machine-readable audit (`pip-licenses`, `cargo-license`, `license-checker`) and reviewed by hand.
+> **Status:** current inventory for 0.2.0. Dependency versions are pinned in `backend/requirements*.txt`, `ui/package-lock.json`, `package-lock.json` and `src-tauri/Cargo.toml`. Before the first public release this file is regenerated from a machine-readable audit (`pip-licenses`, `cargo-license`, `license-checker`) and reviewed by hand.
 
 ## Policy
 

@@ -1,8 +1,9 @@
 {
   "name": "veyra",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Local-first AI assistant for Windows",
+  "author": "Jaskirat",
   "license": "MIT",
   "scripts": {
     "dev": "tauri dev",

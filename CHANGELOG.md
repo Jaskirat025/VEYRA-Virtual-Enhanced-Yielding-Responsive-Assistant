@@ -6,6 +6,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-11-09
+
 ### Added
 
 - **First-run downloads.** Ollama and Whisper downloads run in parallel during onboarding, report byte-level progress where available, skip assets that are already installed, and can be retried independently.

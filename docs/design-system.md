@@ -180,7 +180,7 @@ Tool log, chat and settings stay fully functional.
 - Left rail 64 px collapsed / 200 px expanded, with icon plus label.
 - Content max-width 1080 px, 24 px gutters.
 - Status bar 32 px tall at the bottom: connection, active model, RAM, low-power toggle.
-- Mini widget (future scope, not in 0.1.0): 180×72 px, always-on-top, orb plus one status line, draggable, no title bar.
+- Mini widget (future scope, not yet implemented): 180×72 px, always-on-top, orb plus one status line, draggable, no title bar.
 
 ## Accessibility checklist
 

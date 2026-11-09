@@ -14,6 +14,7 @@ import secrets
 import socket
 import sys
 
+from backend import __version__
 from backend.api.app import create_app
 from backend.config import SettingsStore
 from backend.context import RuntimeContext, set_context
@@ -69,7 +70,7 @@ def main(argv: list[str] | None = None) -> int:
                     "type": "veyra-ready",
                     "port": port,
                     "token": token,
-                    "version": "0.1.0",
+                    "version": __version__,
                     "data_dir": str(app_data_dir()),
                 }
             ),
