@@ -53,10 +53,6 @@ No icon font is planned; icons are inline SVG drawn in-house to keep the bundle 
 | Pydantic | Schema validation | MIT | |
 | websockets | WebSocket transport | BSD-3-Clause | |
 | HTTPX | HTTP client for providers | BSD-3-Clause | replaces PyGithub to avoid LGPL |
-| icalendar | iCalendar parsing for read-only calendar feeds | BSD-2-Clause | |
-| python-dateutil | Recurrence expansion for iCalendar events | Apache-2.0 OR BSD-3-Clause | |
-| tzdata | IANA timezone data on Windows | Apache-2.0 | transitive via icalendar |
-| six | Python compatibility for dateutil | MIT | transitive |
 | python-dotenv | Developer `.env` loading | BSD-3-Clause | end users never need it |
 | keyring | Windows Credential Manager access | MIT | |
 | Ollama | Local model runtime | MIT | installed separately by the user, not bundled |
@@ -100,8 +96,6 @@ No icon font is planned; icons are inline SVG drawn in-house to keep the bundle 
 | Component | Role | License | Notes |
 | --- | --- | --- | --- |
 | GitHub REST API | Repository, issue and commit tools | API terms of service | called with the user's personal token; no client library shipped |
-| google-api-python-client | Gmail and Calendar tools | Apache-2.0 | |
-| google-auth, google-auth-oauthlib | Google OAuth flow | Apache-2.0 | project-owned client injected at build time |
 | Mercury 3 (Inception Labs) | Optional online model | Commercial API | not redistributed; used only with the user's own key and explicit opt-in |
 
 ## Installer and build tooling

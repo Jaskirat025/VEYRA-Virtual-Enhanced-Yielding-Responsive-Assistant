@@ -55,8 +55,6 @@ export interface CustomApiDefinition {
 export interface IntegrationSettings {
   github_login: string;
   github_read_only: boolean;
-  google_read_only: boolean;
-  gmail_address: string;
 }
 
 export interface InterfaceSettings {

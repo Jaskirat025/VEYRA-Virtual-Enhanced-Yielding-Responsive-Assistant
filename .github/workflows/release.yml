@@ -46,32 +46,10 @@ jobs:
           pip install -r backend/requirements-windows.txt
           pip install "pyinstaller>=6.6,<7"
 
-      - name: Prepare Google sign-in client
-        shell: pwsh
-        env:
-          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
-          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
-        run: |
-          if (-not $env:GOOGLE_CLIENT_ID -or -not $env:GOOGLE_CLIENT_SECRET) {
-            throw "GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET repository secrets are required."
-          }
-          $client = @{
-            installed = @{
-              client_id = $env:GOOGLE_CLIENT_ID
-              client_secret = $env:GOOGLE_CLIENT_SECRET
-              auth_uri = "https://accounts.google.com/o/oauth2/auth"
-              token_uri = "https://oauth2.googleapis.com/token"
-              auth_provider_x509_cert_url = "https://www.googleapis.com/oauth2/v1/certs"
-              redirect_uris = @("http://localhost")
-            }
-          }
-          $client | ConvertTo-Json -Depth 4 | Set-Content -Path backend/google_client.json -Encoding utf8NoBOM
-
       - name: Build backend sidecar
         run: >
           pyinstaller --noconfirm --clean --onefile --name veyra-backend
-          --paths . --collect-submodules uvicorn --collect-data tzdata
-          --add-data "backend/google_client.json;backend"
+          --paths . --collect-submodules uvicorn
           --distpath dist-backend --workpath build/pyinstaller --specpath build
           backend/main.py
 

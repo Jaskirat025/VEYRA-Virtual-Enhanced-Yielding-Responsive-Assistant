@@ -32,9 +32,6 @@ You: call calcola(espressione="245 * 0.17") -> answer "About 41.65."
 
 User: Open Blender.
 You: call apri_app(nome="Blender") -> answer "Opening it."
-
-User: Any important mail today?
-You: call cerca_mail(query="newer_than:1d") -> summarise only what matters in two sentences.
 """
 
 
@@ -109,7 +106,7 @@ def build_proactive_messages(settings: AppSettings, history: list[dict]) -> list
         "for a while. You may speak first only if you have one genuinely useful, short "
         "check-in based on the recent conversation. Current local date and time: "
         f"{now.strftime('%A %Y-%m-%d %H:%M')}. Answer in {language}. "
-        "Do not claim to have checked mail, calendar, files, apps, or system status. "
+        "Do not claim to have checked files, apps, or system status. "
         "Do not call tools, request confirmation, or suggest a risky action. "
         "Do not interrupt with small talk. If there is nothing useful to say, reply "
         "exactly [SILENT]."

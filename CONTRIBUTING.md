@@ -6,7 +6,7 @@ Thanks for taking the time to help. VEYRA is a Windows desktop assistant that ha
 
 1. **English in the repository.** Code, identifiers (except the tool names defined by the product specification), comments, docstrings, log messages, commit messages, issues and documentation are written in English. User-facing strings are translated through i18n files only.
 2. **No personal data.** No real names, e-mail addresses, account IDs, machine names, user directory paths or screenshots containing them. Example paths use `%APPDATA%` or relative paths.
-3. **No secrets.** No API keys, OAuth client secrets, tokens, cookies or private keys — not in code, not in tests, not in fixtures, not in issue reports. Real values belong in Windows Credential Manager at runtime.
+3. **No secrets.** No API keys, access tokens, cookies or private keys — not in code, not in tests, not in fixtures, not in issue reports. Real values belong in Windows Credential Manager at runtime.
 4. **Respect the memory budget.** Target is about 4 GB of RAM on an 8 GB machine. New dependencies must justify their memory and startup cost. Never keep two LLMs loaded.
 5. **Permissive dependencies only.** Shipped runtime code must use MIT, Apache-2.0, BSD, ISC, PSF, OFL or public-domain components. Anything else needs a discussion and an entry in `THIRD_PARTY_LICENSES.md` first.
 6. **No hidden network calls and no telemetry.** Anything that leaves the machine must be user-enabled and documented.

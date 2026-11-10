@@ -19,7 +19,6 @@ SERVICE_NAME = "Veyra"
 _ENV_FALLBACK = {
     "online_api_key": "VEYRA_ONLINE_API_KEY",
     "github_token": "VEYRA_GITHUB_TOKEN",
-    "google_client_secret": "VEYRA_GOOGLE_CLIENT_SECRET",
 }
 
 _memory_store: dict[str, str] = {}

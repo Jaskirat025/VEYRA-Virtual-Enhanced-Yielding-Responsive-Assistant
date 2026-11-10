@@ -83,29 +83,6 @@ Direct Claude access uses Anthropic's `x-api-key` header and its own message for
 
 The model builds a JSON object with `model`, `max_tokens` and `messages`. The response is wrapped as external data. If you want Claude to be the **chat brain** instead of a tool, use an OpenAI-compatible gateway in **Settings → Models**; VEYRA's router protocol is OpenAI chat completions.
 
-## Gemini
-
-Google's Generative Language API accepts the key in `x-goog-api-key`:
-
-```json
-[
-  {
-    "id": "gemini",
-    "name": "Gemini",
-    "description": "Call Gemini. Payload: contents -> parts -> text.",
-    "base_url": "https://generativelanguage.googleapis.com/v1beta",
-    "path": "/models/gemini-model:generateContent",
-    "method": "POST",
-    "auth_header": "x-goog-api-key",
-    "auth_prefix": "",
-    "headers": {"content-type": "application/json"},
-    "enabled": true
-  }
-]
-```
-
-Replace `gemini-model` with the model id from the Gemini console. Gemini also publishes an OpenAI-compatible endpoint that can be used as the online chat model in **Settings → Models**.
-
 ## Mercury and other OpenAI-compatible providers
 
 Mercury and many other providers expose OpenAI-compatible chat completions. Configure **Settings → Models**:

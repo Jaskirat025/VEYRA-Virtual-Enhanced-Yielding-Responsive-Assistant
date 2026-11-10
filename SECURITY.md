@@ -1,6 +1,6 @@
 # Security Policy
 
-VEYRA is a desktop assistant with access to the user's applications, files, e-mail and calendar. Its security model is intentionally conservative: local by default, explicit confirmation for anything risky, and no telemetry.
+VEYRA is a desktop assistant with access to the user's applications and files. Its security model is intentionally conservative: local by default, explicit confirmation for anything risky, and no telemetry.
 
 ## Supported versions
 
@@ -19,7 +19,7 @@ Use GitHub's **private vulnerability reporting** on this repository:
 2. Choose **Report a vulnerability**.
 3. Describe the issue in the private advisory form.
 
-Please do not open a public issue for a security problem, and do not include live API keys, OAuth tokens, chat transcripts, private e-mail content or personal paths in any report. Redact them; a description of the shape of the problem is enough.
+Please do not open a public issue for a security problem, and do not include live API keys, access tokens, chat transcripts, private file content or personal paths in any report. Redact them; a description of the shape of the problem is enough.
 
 A useful report contains:
 
@@ -49,11 +49,10 @@ Reporters are credited in the advisory unless they ask to stay anonymous.
 | --- | --- |
 | Transport | Backend binds to `127.0.0.1` only, on a random free port chosen at startup |
 | Authentication | Per-run session token, required on every HTTP request and WebSocket message; regenerated on each start |
-| Secrets at rest | API keys, app passwords, calendar iCal URLs and OAuth tokens in Windows Credential Manager through `keyring`; never in `config.json`, never logged |
-| Google OAuth client | Project-owned Desktop client injected at build time from repository secrets; the generated client file is git-ignored and never committed |
+| Secrets at rest | API keys and integration tokens in Windows Credential Manager through `keyring`; never in `config.json`, never logged |
 | Proactive mode | Optional, off by default; uses only the local model and recent local chat history, with no tool access or external services |
 | Tool risk | Every tool declares `SAFE`, `CONFIRM` or `DANGEROUS`; confirmation is required in the UI and, for high risk, summarized before execution |
-| Prompt injection | External content (mail, web, files) is wrapped in `<dati_esterni fonte="...">` blocks and marked as data; after such content is read in a turn, `CONFIRM`/`DANGEROUS` tools stay blocked until the user confirms |
+| Prompt injection | External content (web, files) is wrapped in `<dati_esterni fonte="...">` blocks and marked as data; after such content is read in a turn, `CONFIRM`/`DANGEROUS` tools stay blocked until the user confirms |
 | Custom APIs | Definitions are validated to http(s), cannot contain credentials, auth headers or traversal paths; keys stay in Credential Manager; every call is `CONFIRM`; responses are wrapped as external data; the model cannot choose an arbitrary URL |
 | Code execution | `esegui_python` runs in a separate process with a timeout, no network, and no access to user document folders |
 | Desktop shell | Minimal Tauri allowlist, restrictive CSP, no remote origins in the webview, no `eval` of untrusted content |
@@ -65,7 +64,7 @@ Reporters are credited in the advisory unless they ask to stay anonymous.
 In scope:
 
 - a malicious or compromised online model provider returning hostile content;
-- prompt injection through e-mail, issue text, web pages, files or a configured custom API response;
+- prompt injection through issue text, web pages, files or a configured custom API response;
 - a compromised dependency in the supply chain;
 - another local process on the same machine trying to reach the backend;
 - accidental disclosure of secrets through logs, crash reports or the repository.
@@ -75,7 +74,7 @@ Out of scope:
 - an attacker with administrator rights or physical access to an unlocked machine;
 - malware already running in the user's session;
 - a tampered Ollama binary or a malicious model file installed by the user;
-- how third-party providers (online model API, Google, GitHub) handle data they receive;
+- how third-party providers (online model API, GitHub) handle data they receive;
 - denial of service caused by the user's own machine being out of memory.
 
 ## Secrets for contributors

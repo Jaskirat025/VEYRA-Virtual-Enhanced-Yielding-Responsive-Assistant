@@ -44,9 +44,6 @@ export function SettingsScreen() {
   const [secretKind, setSecretKind] = useState<"online_api_key" | "github_token">(
     "online_api_key",
   );
-  const [googleWrite, setGoogleWrite] = useState(false);
-  const [gmailPassword, setGmailPassword] = useState("");
-  const [calendarIcsUrl, setCalendarIcsUrl] = useState("");
   const [customApisText, setCustomApisText] = useState("[]");
   const [customApiKeys, setCustomApiKeys] = useState<Record<string, string>>({});
 
@@ -119,47 +116,6 @@ export function SettingsScreen() {
     }
   };
 
-  const saveGmail = async () => {
-    if (!backend) return;
-    setMessage(null);
-    try {
-      await saveSettings({
-        integrations: {
-          ...draft.integrations,
-          gmail_address: draft.integrations.gmail_address.trim(),
-        },
-      });
-      if (gmailPassword.trim()) {
-        await apiFetch(backend, "/api/secrets", {
-          method: "POST",
-          body: JSON.stringify({ name: "gmail_app_password", value: gmailPassword.trim() }),
-        });
-        setGmailPassword("");
-      }
-      setMessage(t("settings.gmailSaved"));
-    } catch (error) {
-      setMessage((error as Error).message);
-    }
-  };
-
-  const saveCalendarIcs = async () => {
-    if (!backend) return;
-    const value = calendarIcsUrl.trim();
-    setMessage(null);
-    try {
-      await apiFetch(backend, "/api/secrets", {
-        method: "POST",
-        body: JSON.stringify({ name: "calendar_ics_url", value }),
-      });
-      setCalendarIcsUrl("");
-      setMessage(
-        value ? t("settings.calendarIcsSaved") : t("settings.calendarIcsRemoved"),
-      );
-    } catch (error) {
-      setMessage((error as Error).message);
-    }
-  };
-
   const saveCustomApiKey = async (id: string) => {
     if (!backend) return;
     const value = (customApiKeys[id] ?? "").trim();
@@ -182,18 +138,6 @@ export function SettingsScreen() {
         tool_permissions: { ...(settings?.tool_permissions ?? {}), [name]: enabled },
       });
       await refreshTools();
-    } catch (error) {
-      setMessage((error as Error).message);
-    }
-  };
-
-  const connectGoogle = async () => {
-    if (!backend) return;
-    try {
-      await apiFetch(backend, `/api/google/connect?allow_write=${googleWrite}`, {
-        method: "POST",
-      });
-      setMessage(t("settings.googleConnected"));
     } catch (error) {
       setMessage((error as Error).message);
     }
@@ -444,90 +388,6 @@ export function SettingsScreen() {
             />
             {t("settings.githubReadOnly")}
           </label>
-          <label className="flex items-center gap-3 text-sm text-silver-300">
-            <input
-              type="checkbox"
-              className="h-4 w-4 accent-[var(--vy-accent-500)]"
-              checked={draft.integrations.google_read_only}
-              onChange={(event) =>
-                patchGroup("integrations", "google_read_only", event.target.checked)
-              }
-            />
-            {t("settings.googleReadOnly")}
-          </label>
-          <Field label={t("settings.gmailAddress")}>
-            <input
-              type="email"
-              autoComplete="off"
-              className="vy-field"
-              value={draft.integrations.gmail_address}
-              placeholder="Gmail address"
-              onChange={(event) =>
-                patchGroup("integrations", "gmail_address", event.target.value)
-              }
-            />
-          </Field>
-          <Field label={t("settings.gmailPassword")}>
-            <input
-              type="password"
-              autoComplete="off"
-              className="vy-field"
-              value={gmailPassword}
-              onChange={(event) => setGmailPassword(event.target.value)}
-              placeholder="•••• •••• •••• ••••"
-            />
-          </Field>
-          <p className="text-[11px] leading-relaxed text-silver-500">
-            {t("settings.gmailLocalHint")}{" "}
-            <a
-              className="text-accent underline"
-              href="https://myaccount.google.com/apppasswords"
-              target="_blank"
-              rel="noreferrer"
-            >
-              {t("settings.gmailAppPasswords")}
-            </a>
-          </p>
-          <button type="button" className="vy-btn" onClick={() => void saveGmail()}>
-            {t("settings.saveGmail")}
-          </button>
-          <div className="vy-hairline" />
-          <Field label={t("settings.calendarIcsUrl")}>
-            <input
-              type="password"
-              autoComplete="off"
-              className="vy-field"
-              value={calendarIcsUrl}
-              onChange={(event) => setCalendarIcsUrl(event.target.value)}
-              placeholder="https://calendar.google.com/calendar/ical/…/basic.ics"
-            />
-          </Field>
-          <p className="text-[11px] leading-relaxed text-silver-500">
-            {t("settings.calendarIcsHint")}
-          </p>
-          <button
-            type="button"
-            className="vy-btn"
-            onClick={() => void saveCalendarIcs()}
-          >
-            {t("settings.saveCalendarIcs")}
-          </button>
-          <div className="vy-hairline" />
-          <p className="text-[11px] leading-relaxed text-silver-500">
-            {t("settings.googleSignInHint")}
-          </p>
-          <label className="flex items-center gap-3 text-sm text-silver-300">
-            <input
-              type="checkbox"
-              className="h-4 w-4 accent-[var(--vy-accent-500)]"
-              checked={googleWrite}
-              onChange={(event) => setGoogleWrite(event.target.checked)}
-            />
-            {t("settings.googleWrite")}
-          </label>
-          <button type="button" className="vy-btn" onClick={() => void connectGoogle()}>
-            {t("settings.connectGoogle")}
-          </button>
         </Section>
 
         <Section title={t("settings.interface")}>

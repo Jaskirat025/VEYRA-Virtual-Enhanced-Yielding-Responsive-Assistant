@@ -29,7 +29,6 @@ class Category(StrEnum):
     CALC = "calc"
     CODE = "code"
     GITHUB = "github"
-    GOOGLE = "google"
     MEMORY = "memory"
     COMMUNICATION = "communication"
     CUSTOM = "custom"

@@ -28,11 +28,11 @@ conversation exists; it does not greet an empty session.
 
 Proactive turns are deliberately restricted:
 
-- no tool calls, including Gmail, Calendar, files, apps or custom APIs;
+- no tool calls, including files, apps or custom APIs;
 - no external model or network request;
 - no microphone recording and no background listening;
 - no automatic action, confirmation dialog or change to the computer;
-- no reading of mail, calendar or files. It only sees the recent local chat
+- no reading of files or external services. It only sees the recent local chat
   history.
 
 A proactive message cannot claim that VEYRA checked an external service. The

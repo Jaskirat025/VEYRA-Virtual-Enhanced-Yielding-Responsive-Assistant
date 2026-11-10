@@ -34,13 +34,6 @@ EXPECTED_TOOLS = {
     "leggi_issue",
     "ultimi_commit",
     "crea_issue",
-    "cerca_mail",
-    "leggi_mail",
-    "bozza_mail",
-    "invia_mail",
-    "eventi_oggi",
-    "eventi_range",
-    "crea_evento",
     "salva_nota",
     "cerca_note",
     "timer",
@@ -67,7 +60,6 @@ def test_schema_uses_type_hints_and_docstring():
 def test_risk_levels_are_declared():
     assert get_tool("elimina_file").risk is Risk.DANGEROUS
     assert get_tool("chiudi_app").risk is Risk.CONFIRM
-    assert get_tool("invia_mail").risk is Risk.CONFIRM
     assert get_tool("esegui_python").risk is Risk.DANGEROUS
     assert get_tool("chiama_api").risk is Risk.CONFIRM
 

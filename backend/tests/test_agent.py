@@ -159,7 +159,7 @@ def test_proactive_check_in_can_speak_or_stay_silent(database, context):
 
 def test_external_content_detection():
     agent = Agent(AppSettings(), None, None, ConfirmBroker())  # type: ignore[arg-type]
-    messages = [{"role": "tool", "content": "<dati_esterni fonte='gmail'>hello</dati_esterni>"}]
+    messages = [{"role": "tool", "content": "<dati_esterni fonte='web'>hello</dati_esterni>"}]
     assert agent._external_read(messages) is True
     assert agent._external_read([{"role": "tool", "content": "plain"}]) is False
 

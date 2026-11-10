@@ -107,7 +107,7 @@ PATTERNS = (
         re.compile(r"\bsk-[A-Za-z0-9_-]{20,}"),
     ),
     (
-        "Google API key",
+        "Cloud API key",
         re.compile(r"\bAIza[0-9A-Za-z_-]{30,}"),
     ),
     (

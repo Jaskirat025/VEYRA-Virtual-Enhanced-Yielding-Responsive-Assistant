@@ -7,7 +7,6 @@ from backend.tools.builtin import (  # noqa: F401
     custom_api,
     files,
     github,
-    google,
     memory_tools,
     meta,
     system,

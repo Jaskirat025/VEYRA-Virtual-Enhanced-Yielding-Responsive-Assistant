@@ -42,7 +42,7 @@ Rules:
 | Level | Behaviour | Examples |
 | --- | --- | --- |
 | `SAFE` | Executes immediately, logged, no prompt | `stato_pc`, `calcola`, `cerca_file`, `leggi_file`, `cerca_mail` |
-| `CONFIRM` | Requires user confirmation (voice or UI) before execution | `chiudi_app`, `invia_mail`, `crea_issue`, `sposta_file`, `clicca` |
+| `CONFIRM` | Requires user confirmation (voice or UI) before execution | `chiudi_app`, `crea_issue`, `sposta_file`, `clicca` |
 | `DANGEROUS` | Requires confirmation plus a written summary of the consequences | `elimina_file`, `esegui_python` |
 
 Additional rules:
@@ -50,7 +50,7 @@ Additional rules:
 - Choose the **highest** level that could apply. `chiudi_app` is `CONFIRM` even though most closes are harmless.
 - `DANGEROUS` tools must show the resolved target, not the raw model arguments: the absolute path, the exact code, the recipient address.
 - File deletion prefers the Recycle Bin. Permanent deletion needs a second, explicit choice.
-- Write access to Google and GitHub is disabled by default and enabled per integration in Settings.
+- Write access to GitHub is disabled by default and enabled in Settings.
 
 ## Confirmation flow
 
@@ -61,7 +61,7 @@ Additional rules:
 5. Denial returns “The user declined this action.” to the model and is logged as `denied`.
 6. Confirmation expires after 120 seconds.
 
-Prompt-injection lockout: once a turn has read external content (mail, issue body, web page, file), `CONFIRM` and `DANGEROUS` tools are blocked until the user confirms through the UI. The model cannot lift this lockout.
+Prompt-injection lockout: once a turn has read external content (issue body, web page, file), `CONFIRM` and `DANGEROUS` tools are blocked until the user confirms through the UI. The model cannot lift this lockout.
 
 ## Validation and execution
 
@@ -90,7 +90,6 @@ The pre-classifier maps an utterance to one or more categories and only those to
 | `calc` | `calcola`, `converti_unita`, `risolvi_equazione`, `grafico` |
 | `code` | `esegui_python` |
 | `github` | `lista_repo`, `leggi_issue`, `ultimi_commit`, `crea_issue` |
-| `google` | `cerca_mail`, `leggi_mail`, `bozza_mail`, `invia_mail`, `eventi_oggi`, `eventi_range`, `crea_evento` |
 | `memory` | `salva_nota`, `cerca_note`, `timer`, `sveglia` |
 | `communication` | `condividi_whatsapp` |
 | `custom` | `chiama_api` (definition supplied by the user) |
@@ -115,7 +114,7 @@ Runtime code generation is intentionally not part of this flow. A new protocol t
 ## Settings and permissions
 
 - Every tool has an on/off switch in Settings → Permissions, grouped by category.
-- Integrations (GitHub, Google) are off until configured; read-only is the default. Google sign-in uses the project-owned OAuth client shipped with the build; Gmail can also use a local app password, and Calendar reads can use a secret iCal feed.
+- GitHub is off until configured; read-only is the default.
 - Custom APIs are user-defined JSON, limited to 20 entries, and remain disabled from the model's tool list until the definition is saved and enabled.
 - Disabled tools are removed from the model's tool list, and calling one is an error, never an execution.
 - Per-tool last-used time and error count are visible in the tool log.

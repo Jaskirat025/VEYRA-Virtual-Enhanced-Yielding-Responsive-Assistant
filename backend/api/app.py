@@ -21,8 +21,6 @@ from backend.bootstrap import BootstrapManager
 from backend.brain.agent import ConfirmBroker
 from backend.brain.llm import LLMError, fetch_ollama_models
 from backend.config import AppSettings, SettingsStore
-from backend.integrations import calendar_ics
-from backend.integrations.google_oauth import GoogleAuthError, connect, save_client_config
 from backend.memory.db import Database
 from backend.paths import app_data_dir
 from backend.secrets import delete_secret, get_secret, secret_status, set_secret
@@ -33,10 +31,6 @@ logger = logging.getLogger(__name__)
 SECRET_NAMES = (
     "online_api_key",
     "github_token",
-    "google_client_secret",
-    "google_token_json",
-    "gmail_app_password",
-    "calendar_ics_url",
 )
 CUSTOM_API_SECRET_PREFIX = "custom_api_"
 _CUSTOM_API_ID = re.compile(r"[a-z][a-z0-9_-]{1,31}")
@@ -176,11 +170,6 @@ def create_app(
         if not _allowed_secret_name(payload.name):
             raise HTTPException(status_code=400, detail="unknown secret name")
         value = payload.value.strip()
-        if payload.name == calendar_ics.SECRET_NAME and value:
-            try:
-                value = calendar_ics.validate_url(value)
-            except ValueError as exc:
-                raise HTTPException(status_code=400, detail=str(exc)) from exc
         set_secret(payload.name, value)
         return {"saved": True, "status": secret_status(SECRET_NAMES)}
 
@@ -258,24 +247,6 @@ def create_app(
         except SpeechUnavailable as exc:
             raise HTTPException(status_code=503, detail=str(exc)) from exc
         return Response(content=audio, media_type="audio/wav")
-
-    @app.post("/api/google/client")
-    async def google_client(payload: dict[str, Any]) -> dict[str, Any]:
-        try:
-            save_client_config(payload)
-        except GoogleAuthError as exc:
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
-        return {"saved": True}
-
-    @app.post("/api/google/connect")
-    async def google_connect(allow_write: bool = False) -> dict[str, Any]:
-        try:
-            message = await asyncio.to_thread(connect, allow_write)
-        except GoogleAuthError as exc:
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
-        except Exception as exc:  # user cancelled the browser flow
-            raise HTTPException(status_code=400, detail=f"Google sign-in failed: {exc}") from exc
-        return {"ok": True, "message": message}
 
     @app.websocket("/ws")
     async def websocket_endpoint(websocket: WebSocket) -> None:
