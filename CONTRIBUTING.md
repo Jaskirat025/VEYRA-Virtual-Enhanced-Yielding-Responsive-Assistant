@@ -70,9 +70,10 @@ It fails on tracked secrets, databases and model files, and on personal paths or
 
 A pull request is ready when:
 
+- [ ] `python scripts/check_versions.py` passes.
 - [ ] `python scripts/check_hygiene.py` passes.
 - [ ] The relevant phase checks pass (`ruff`, `pytest`, `npm run build`, `cargo clippy` once they exist).
-- [ ] New behaviour is documented, and `CHANGELOG.md` has an entry under `Unreleased`.
+- [ ] New behaviour is documented, and `CHANGELOG.md` has an entry under the next release section.
 - [ ] No secrets, personal data, model files or build output are included.
 - [ ] Tool changes follow [docs/adding-a-tool.md](docs/adding-a-tool.md) and declare a category and a risk level.
 - [ ] New user-facing strings exist in every supported language file, or are marked as untranslated.

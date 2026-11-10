@@ -4,7 +4,7 @@ All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.0.0] — 2026-11-10
 
 ### Added
 
@@ -14,6 +14,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 ### Removed
 
 - **Google, Gmail and Calendar integrations.** VEYRA no longer bundles Google OAuth, Gmail over IMAP/SMTP, Calendar iCal feeds or the `google` tool category. GitHub and user-defined REST APIs remain available.
+
+### Known limitations
+
+- The Tauri shell, audio devices, Windows automation tools and the NSIS installer still need the final manual test pass on Windows 10/11.
+- The default wake phrase needs a trained openWakeWord model; without one, wake-word detection stays disabled and the UI says so.
+- Release installers are unsigned until code signing is configured; SmartScreen can warn and users should verify the published SHA-256.
 
 ## [0.2.0] — 2026-11-09
 

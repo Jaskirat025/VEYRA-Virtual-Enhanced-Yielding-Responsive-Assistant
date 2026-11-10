@@ -34,6 +34,14 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Verify release version
+        shell: pwsh
+        run: |
+          python scripts/check_versions.py
+          if ($env:GITHUB_REF_TYPE -eq "tag") {
+            python scripts/check_versions.py --tag $env:GITHUB_REF_NAME
+          }
+
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
@@ -92,7 +100,11 @@ jobs:
       - name: Checksums
         shell: pwsh
         run: |
-          Get-ChildItem src-tauri/target/release/bundle/nsis/*.exe | ForEach-Object {
+          $installers = @(Get-ChildItem "src-tauri/target/release/bundle/nsis/*.exe" -File -ErrorAction SilentlyContinue)
+          if ($installers.Count -eq 0) {
+            throw "The release build did not produce an NSIS installer."
+          }
+          $installers | ForEach-Object {
             $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower()
             "$hash  $($_.Name)" | Out-File -Append -Encoding ascii checksums.txt
           }

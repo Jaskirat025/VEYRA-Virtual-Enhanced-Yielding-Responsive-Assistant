@@ -4,7 +4,7 @@
 
 VEYRA is a desktop application, not a script: a frameless HUD window, a tray icon, an animated core, voice input and speech output, and an agentic tool layer that can actually operate your PC — while keeping as much processing as possible on your machine.
 
-> **Status: 0.2.0 — full implementation.**
+> **Status: 1.0.0 — release candidate.**
 > Backend, interface, desktop shell, tool layer, voice pipeline, installer pipeline and CI are in place. The Python brain and the React interface are covered by automated checks in this environment; the Windows-only shell, audio devices and the NSIS installer still need a real Windows test pass (see [installation](docs/installation.md)).
 
 ---
@@ -197,7 +197,7 @@ Each source directory contains a `README.md` describing its planned layout until
 | 9 | GitHub tools and custom REST APIs | implemented |
 | 10 | Settings, onboarding, tool log, i18n EN/IT/ZH | implemented |
 | 11 | Python sandbox and UI automation tools | implemented, Windows test pending |
-| 12 | Installer, GitHub Actions release, final documentation | pipeline ready, Windows build pending |
+| 12 | Installer, GitHub Actions release, final documentation | release 1.0.0 prepared, Windows validation pending |
 
 Each phase ends with install commands, a manual test script, Windows troubleshooting notes and a check for personal data and secrets.
 
@@ -206,6 +206,7 @@ Each phase ends with install commands, a manual test script, Windows troubleshoo
 ## Documentation
 
 - [Installation and requirements](docs/installation.md)
+- [Releasing: version gate, Windows acceptance, tag and draft](docs/releasing.md)
 - [Languages: installer choice, i18n, what stays English](docs/languages.md)
 - [Design system: tokens, type, motion, orb states](docs/design-system.md)
 - [Adding a tool](docs/adding-a-tool.md)

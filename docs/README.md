@@ -10,10 +10,11 @@ Specifications and guides for VEYRA. Everything here is written in English; user
 | [adding-a-tool.md](adding-a-tool.md) | Tool contract, risk levels, schemas, audit log, tests | Phase 2 |
 | [custom-apis.md](custom-apis.md) | Custom REST tools, OpenAI-compatible providers, key storage and safety boundaries | Implemented |
 | [proactive-mode.md](proactive-mode.md) | Optional local check-ins, spoken timer reminders, privacy and limits | Implemented |
+| [releasing.md](releasing.md) | Version gate, Windows acceptance, tag and draft release flow | Maintainers |
 
 ## Status
 
-The application is implemented in this repository. The Python backend and the React interface run their automated checks on every push; Windows-only components (Tauri shell, audio devices, desktop automation, NSIS installer) need a manual test pass on Windows before a public release.
+The 1.0.0 release candidate is implemented in this repository. The Python backend and the React interface run their automated checks on every push; Windows-only components (Tauri shell, audio devices, desktop automation, NSIS installer) need the acceptance pass in [releasing.md](releasing.md) before the tag is published.
 
 Commands marked *planned* in these documents describe the intended end-user flow rather than something the development container could execute.
 

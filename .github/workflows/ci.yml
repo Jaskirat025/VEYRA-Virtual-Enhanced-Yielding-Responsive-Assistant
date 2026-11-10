@@ -26,6 +26,9 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Check version consistency
+        run: python scripts/check_versions.py
+
       - name: Run hygiene gate
         run: python scripts/check_hygiene.py
 
