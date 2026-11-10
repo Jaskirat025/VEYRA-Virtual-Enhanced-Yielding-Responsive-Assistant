@@ -55,8 +55,8 @@ No icon font is planned; icons are inline SVG drawn in-house to keep the bundle 
 | HTTPX | HTTP client for providers | BSD-3-Clause | replaces PyGithub to avoid LGPL |
 | python-dotenv | Developer `.env` loading | BSD-3-Clause | end users never need it |
 | keyring | Windows Credential Manager access | MIT | |
-| Ollama | Local model runtime | MIT | installed separately by the user, not bundled |
-| Qwen3-4B (Q4_K_M) | Default local model | Apache-2.0 | downloaded by the user through Ollama |
+| Ollama | Local model runtime | MIT | portable Windows runtime bundled with the installer |
+| Qwen3-4B (Q4_K_M) | Default local model | Apache-2.0 | downloaded automatically on first run |
 | faster-whisper | Speech-to-text | MIT | lazy loaded |
 | CTranslate2 | Inference engine for Whisper | MIT | |
 | Whisper `base` weights | STT model | MIT | downloaded on demand |

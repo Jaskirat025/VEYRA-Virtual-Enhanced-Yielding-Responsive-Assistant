@@ -19,13 +19,12 @@ from typing import Any
 
 import httpx
 
-from backend.brain.llm import fetch_ollama_models
+from backend.brain.llm import fetch_ollama_models, ollama_url
 from backend.config import AppSettings, SettingsStore
 from backend.paths import models_dir
 
 logger = logging.getLogger(__name__)
 
-OLLAMA_URL = "http://127.0.0.1:11434"
 Runner = Callable[["DownloadJob", AppSettings], Awaitable[None]]
 
 
@@ -65,10 +64,13 @@ def _stt_marker(settings: AppSettings) -> Path:
 async def download_local_model(job: DownloadJob, settings: AppSettings) -> None:
     """Pull the configured Ollama model, reporting byte progress when available."""
     model = settings.models.local_model
+    base_url = ollama_url()
     try:
-        installed = await fetch_ollama_models(OLLAMA_URL, timeout=2.5)
+        installed = await fetch_ollama_models(base_url, timeout=2.5)
     except Exception as exc:
-        raise RuntimeError("Ollama is not reachable. Install Ollama and try again.") from exc
+        raise RuntimeError(
+            "The local model runtime did not start. Restart VEYRA and try again."
+        ) from exc
 
     if model in installed:
         job.status = "skipped"
@@ -83,7 +85,7 @@ async def download_local_model(job: DownloadJob, settings: AppSettings) -> None:
             httpx.AsyncClient(timeout=timeout) as client,
             client.stream(
                 "POST",
-                f"{OLLAMA_URL}/api/pull",
+                f"{base_url}/api/pull",
                 json={"name": model, "stream": True},
             ) as response,
         ):

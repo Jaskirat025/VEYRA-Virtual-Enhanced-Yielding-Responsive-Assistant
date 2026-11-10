@@ -8,11 +8,11 @@
 | --- | --- |
 | Windows | 10 21H2 or newer, or Windows 11; 64-bit |
 | RAM | 8 GB total; VEYRA targets about 4 GB |
-| Free disk | ≈ 5 GB (application plus downloaded models) |
+| Free disk | ≈ 6 GB (application, bundled runtime plus downloaded models) |
 | WebView2 | Preinstalled on Windows 11, distributed by Microsoft to Windows 10; the installer verifies it |
-| Ollama | Required for the local model; installed separately |
+| Local LLM | Portable Ollama runtime bundled; no separate installation |
 | Microphone | Optional; the app is fully usable with the keyboard |
-| Internet | Optional; only for online features you enable |
+| Internet | Required for the first-run model download; optional afterwards |
 
 ## Install flow
 
@@ -26,7 +26,7 @@ Windows SmartScreen may warn about an unsigned build. Until releases are code-si
 ## First-run onboarding
 
 1. **Identity and language** — assistant name and interface language.
-2. **First-run downloads** — the local Ollama model and the faster-whisper speech model start together as soon as onboarding opens. The screen shows each job, its size and progress. If one fails, retry it without restarting the other. Ollama must already be installed; VEYRA does not install it.
+2. **First-run downloads** — the local model and the faster-whisper speech model start together as soon as onboarding opens. The screen shows each job, its size and progress. If one fails, retry it without restarting the other. The portable Ollama runtime is bundled with VEYRA; the model is downloaded automatically.
 3. **Microphone** — local speech input, with keyboard input always available as a fallback.
 4. **Voice** — a short local voice test.
 5. **Summary** — name, language, model and data folder.
@@ -38,7 +38,7 @@ Onboarding can be skipped. Name, language, microphone and voice settings can be 
 | Tool | Version | Needed from |
 | --- | --- | --- |
 | Python | 3.11 | Backend and tools |
-| Ollama | current | Local model |
+| Ollama | current | Local development only; release builds bundle the portable runtime |
 | Node.js | 20 LTS | Interface build |
 | Rust toolchain + MSVC build tools | stable | Desktop shell |
 | WebView2 runtime | current | Desktop shell |
@@ -106,7 +106,7 @@ Rules that keep it there:
 | Symptom | Likely cause | Check |
 | --- | --- | --- |
 | Window opens blank | WebView2 missing or outdated | install the Evergreen WebView2 Runtime |
-| “Local model unavailable” | Ollama not running | `ollama list`, start the Ollama service |
+| “Local model unavailable” | bundled runtime did not start | restart VEYRA and check `%APPDATA%\Veyra\logs` |
 | Model download stalls | network or disk space | free space on the drive holding the Ollama models |
 | No audio input | microphone privacy setting | Settings → Privacy → Microphone |
 | TTS silent | voice not downloaded | download the voice in Settings → Voice |

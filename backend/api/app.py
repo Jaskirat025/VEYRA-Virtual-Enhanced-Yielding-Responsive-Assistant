@@ -19,7 +19,7 @@ from backend.audio.stt import available as stt_available
 from backend.audio.tts import SpeechUnavailable, synthesize
 from backend.bootstrap import BootstrapManager
 from backend.brain.agent import ConfirmBroker
-from backend.brain.llm import LLMError, fetch_ollama_models
+from backend.brain.llm import LLMError, fetch_ollama_models, ollama_url
 from backend.config import AppSettings, SettingsStore
 from backend.memory.db import Database
 from backend.paths import app_data_dir
@@ -213,7 +213,7 @@ def create_app(
     @app.get("/api/ollama/models")
     async def ollama_models() -> dict[str, Any]:
         try:
-            models = await fetch_ollama_models("http://127.0.0.1:11434")
+            models = await fetch_ollama_models(ollama_url())
         except Exception as exc:
             return {"ok": False, "models": [], "error": f"Ollama is not reachable: {exc}"}
         return {"ok": True, "models": models}
@@ -229,7 +229,7 @@ def create_app(
     @app.get("/api/onboarding/check")
     async def onboarding_check() -> dict[str, Any]:
         try:
-            models = await fetch_ollama_models("http://127.0.0.1:11434")
+            models = await fetch_ollama_models(ollama_url())
             ollama = {"ok": True, "models": models}
         except Exception as exc:
             ollama = {"ok": False, "models": [], "error": str(exc)}
@@ -267,7 +267,7 @@ def create_app(
 async def provider_ping(settings: AppSettings) -> bool:
     """Used by tests and the status bar to check the local model."""
     try:
-        await fetch_ollama_models("http://127.0.0.1:11434", timeout=1.5)
+        await fetch_ollama_models(ollama_url(), timeout=1.5)
         return True
     except (LLMError, Exception):
         return False

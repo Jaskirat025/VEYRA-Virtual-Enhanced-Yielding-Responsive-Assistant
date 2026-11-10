@@ -8,6 +8,10 @@ on:
 permissions:
   contents: write
 
+env:
+  OLLAMA_VERSION: v0.40.16
+  OLLAMA_WINDOWS_SHA256: 50fcf5ad54277f2fa5d173ebfc93bcb017adbc0c9ef2314daabc96ca9e6aa64e
+
 jobs:
   windows:
     name: Windows installer
@@ -32,6 +36,31 @@ jobs:
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
+
+      - name: Bundle portable Ollama
+        shell: pwsh
+        run: |
+          $ProgressPreference = "SilentlyContinue"
+          $zip = Join-Path $env:RUNNER_TEMP "ollama-windows-amd64.zip"
+          $target = Join-Path $PWD "src-tauri/ollama"
+          $url = "https://github.com/ollama/ollama/releases/download/$env:OLLAMA_VERSION/ollama-windows-amd64.zip"
+          curl.exe --fail --location --retry 3 --output $zip $url
+          $hash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($hash -ne $env:OLLAMA_WINDOWS_SHA256) {
+            throw "Ollama checksum mismatch: expected $env:OLLAMA_WINDOWS_SHA256, got $hash"
+          }
+          New-Item -ItemType Directory -Force -Path $target | Out-Null
+          Expand-Archive -Path $zip -DestinationPath $target -Force
+          $exe = Get-ChildItem $target -Recurse -Filter ollama.exe | Select-Object -First 1
+          if (-not $exe) { throw "ollama.exe is missing from the portable archive" }
+          if ($exe.DirectoryName -ne (Resolve-Path $target).Path) {
+            Get-ChildItem $exe.DirectoryName -Force | Move-Item -Destination $target -Force
+          }
+          if (-not (Test-Path (Join-Path $target "lib/ollama"))) {
+            throw "Ollama runtime libraries are missing from the portable archive"
+          }
+          curl.exe --fail --location --retry 3 --output (Join-Path $target "LICENSE") "https://raw.githubusercontent.com/ollama/ollama/$env:OLLAMA_VERSION/LICENSE"
+          Get-ChildItem $target | Select-Object Name, Length
 
       - name: Install root tooling
         run: npm ci

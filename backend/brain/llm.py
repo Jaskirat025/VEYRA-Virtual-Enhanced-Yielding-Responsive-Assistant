@@ -5,12 +5,20 @@ from __future__ import annotations
 import contextlib
 import json
 import logging
+import os
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
 import httpx
 
 logger = logging.getLogger(__name__)
+
+DEFAULT_OLLAMA_URL = "http://127.0.0.1:11434"
+
+
+def ollama_url() -> str:
+    """Return the local runtime URL, including the bundled Ollama port."""
+    return (os.environ.get("VEYRA_OLLAMA_URL") or DEFAULT_OLLAMA_URL).rstrip("/")
 
 
 class LLMError(Exception):
@@ -130,7 +138,7 @@ class OllamaProvider:
         context_tokens: int = 4096,
         timeout: float = 120.0,
     ) -> None:
-        self.base_url = (base_url or "http://127.0.0.1:11434").rstrip("/")
+        self.base_url = (base_url or ollama_url()).rstrip("/")
         self.model = model
         self.temperature = temperature
         self.context_tokens = context_tokens
@@ -155,7 +163,7 @@ class OllamaProvider:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 response = await client.post(f"{self.base_url}/api/chat", json=payload)
         except httpx.HTTPError as exc:
-            raise LLMError("The local model is not reachable. Is Ollama running?") from exc
+            raise LLMError("The local model runtime is not reachable.") from exc
 
         if response.status_code >= 400:
             detail = ""
@@ -273,8 +281,8 @@ class OnlineProvider:
         )
 
 
-async def fetch_ollama_models(base_url: str, timeout: float = 3.0) -> list[str]:
-    base_url = (base_url or "http://127.0.0.1:11434").rstrip("/")
+async def fetch_ollama_models(base_url: str | None = None, timeout: float = 3.0) -> list[str]:
+    base_url = (base_url or ollama_url()).rstrip("/")
     async with httpx.AsyncClient(timeout=timeout) as client:
         response = await client.get(f"{base_url}/api/tags")
         response.raise_for_status()

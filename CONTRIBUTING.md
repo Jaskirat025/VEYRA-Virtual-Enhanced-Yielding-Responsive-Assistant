@@ -32,7 +32,7 @@ Prerequisites for the full application:
 | Python | 3.11 | Phase 1 |
 | Node.js | 20 LTS | Phase 4 |
 | Rust + MSVC build tools | stable | Phase 4 |
-| Ollama | current | Phase 1 |
+| Ollama | current | Local development only; release builds bundle the portable runtime |
 | WebView2 runtime | current | Phase 4 |
 
 Run the repository hygiene gate before every commit:

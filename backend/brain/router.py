@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 
-from backend.brain.llm import ChatProvider, OllamaProvider, OnlineProvider
+from backend.brain.llm import ChatProvider, OllamaProvider, OnlineProvider, ollama_url
 from backend.config import AppSettings
 from backend.secrets import get_secret
 
@@ -54,7 +54,7 @@ class Router:
     def local_provider(self) -> OllamaProvider:
         models = self.settings.models
         return OllamaProvider(
-            base_url="http://127.0.0.1:11434",
+            base_url=ollama_url(),
             model=models.local_model,
             temperature=models.temperature,
             context_tokens=models.context_tokens,

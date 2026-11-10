@@ -40,7 +40,7 @@ prompt says this explicitly, and the mode receives no tool schemas.
 
 ## Privacy and control
 
-- The mode uses the local Ollama model. If Ollama is unavailable, the check-in
+- The mode uses the local model through the bundled runtime. If it is unavailable, the check-in
   is skipped silently.
 - Chat history stays in the local SQLite database; it is not sent anywhere by
   proactive mode.

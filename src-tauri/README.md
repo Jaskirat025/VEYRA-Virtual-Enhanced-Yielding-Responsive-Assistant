@@ -1,6 +1,6 @@
 # src-tauri/ — Rust desktop shell
 
-> **Status: implemented.** Tauri 2 shell with tray, frameless window, close-to-tray and Python sidecar handshake. The Windows build runs in CI and in the release workflow; it needs a first green run on Windows.
+> **Status: implemented.** Tauri 2 shell with tray, frameless window, close-to-tray, Python sidecar handshake and the bundled portable Ollama runtime. The Windows build runs in CI and in the release workflow; it needs a first green run on Windows.
 
 Layout:
 

@@ -8,6 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ### Added
 
+- **Bundled Ollama runtime.** Release builds include the portable Ollama Windows runtime, start it on a dedicated local port and keep models in the VEYRA data folder. The local model downloads automatically during first-run onboarding; no separate Ollama installation is required.
 - **Proactive mode.** Optional local check-ins after an idle interval, plus spoken timer reminders. Proactive turns never use tools or external services and stay silent when there is nothing useful to say.
 
 ### Removed

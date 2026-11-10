@@ -4,16 +4,26 @@ use serde::Serialize;
 use std::{
     error::Error,
     io::{BufRead, BufReader},
+    net::{SocketAddr, TcpStream},
     path::{Path, PathBuf},
     process::{Child, Command, Stdio},
     sync::Mutex,
+    time::{Duration, Instant},
 };
 use tauri::{Manager, State};
+
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
+
+const OLLAMA_PORT: u16 = 11435;
+#[cfg(windows)]
+const CREATE_NO_WINDOW: u32 = 0x08000000;
 
 struct Backend {
     port: u16,
     token: String,
     child: Mutex<Option<Child>>,
+    ollama: Mutex<Option<Child>>,
 }
 
 impl Drop for Backend {
@@ -24,7 +34,72 @@ impl Drop for Backend {
                 let _ = child.wait();
             }
         }
+        if let Ok(mut guard) = self.ollama.lock() {
+            if let Some(mut child) = guard.take() {
+                let _ = child.kill();
+                let _ = child.wait();
+            }
+        }
     }
+}
+
+fn veyra_data_dir() -> PathBuf {
+    std::env::var_os("APPDATA")
+        .map(PathBuf::from)
+        .or_else(|| std::env::var_os("HOME").map(|home| PathBuf::from(home).join(".config")))
+        .unwrap_or_else(|| PathBuf::from("."))
+        .join("Veyra")
+}
+
+fn wait_for_ollama(timeout: Duration) -> bool {
+    let address = SocketAddr::from(([127, 0, 0, 1], OLLAMA_PORT));
+    let deadline = Instant::now() + timeout;
+    while Instant::now() < deadline {
+        if TcpStream::connect_timeout(&address, Duration::from_millis(250)).is_ok() {
+            return true;
+        }
+        std::thread::sleep(Duration::from_millis(200));
+    }
+    false
+}
+
+fn start_ollama(
+    resource_dir: Option<&Path>,
+    data_dir: &Path,
+) -> Result<Option<Child>, Box<dyn Error>> {
+    let Some(directory) = resource_dir.map(|dir| dir.join("ollama")) else {
+        return Ok(None);
+    };
+    let executable = directory.join("ollama.exe");
+    if !executable.is_file() {
+        return Ok(None);
+    }
+
+    let models = data_dir.join("ollama").join("models");
+    std::fs::create_dir_all(&models)?;
+
+    let mut command = Command::new(&executable);
+    command
+        .arg("serve")
+        .current_dir(&directory)
+        .env("OLLAMA_HOST", format!("127.0.0.1:{OLLAMA_PORT}"))
+        .env("OLLAMA_MODELS", &models)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+    #[cfg(windows)]
+    command.creation_flags(CREATE_NO_WINDOW);
+
+    let mut child = match command.spawn() {
+        Ok(child) => child,
+        Err(error) => return Err(format!("could not start bundled Ollama: {error}").into()),
+    };
+    if !wait_for_ollama(Duration::from_secs(20)) {
+        let _ = child.kill();
+        let _ = child.wait();
+        return Err("bundled Ollama did not become ready".into());
+    }
+    Ok(Some(child))
 }
 
 #[derive(Serialize, Clone)]
@@ -63,6 +138,17 @@ fn python_command() -> Result<Command, Box<dyn Error>> {
 }
 
 fn spawn_backend(resource_dir: Option<PathBuf>) -> Result<Backend, Box<dyn Error>> {
+    let data_dir = veyra_data_dir();
+    std::fs::create_dir_all(&data_dir)?;
+    let mut ollama = match start_ollama(resource_dir.as_deref(), &data_dir) {
+        Ok(child) => child,
+        Err(error) => {
+            eprintln!("Veyra bundled Ollama failed to start: {error}");
+            None
+        }
+    };
+    let bundled_ollama = ollama.is_some();
+
     let mut command = if let Ok(path) = std::env::var("VEYRA_BACKEND_BIN") {
         Command::new(path)
     } else {
@@ -88,13 +174,28 @@ fn spawn_backend(resource_dir: Option<PathBuf>) -> Result<Backend, Box<dyn Error
         }
     };
 
+    if bundled_ollama {
+        command.env(
+            "VEYRA_OLLAMA_URL",
+            format!("http://127.0.0.1:{OLLAMA_PORT}"),
+        );
+    }
     command
         .arg("--handshake")
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::inherit());
 
-    let mut child = command.spawn()?;
+    let mut child = match command.spawn() {
+        Ok(child) => child,
+        Err(error) => {
+            if let Some(mut process) = ollama.take() {
+                let _ = process.kill();
+                let _ = process.wait();
+            }
+            return Err(error.into());
+        }
+    };
     let stdout = child
         .stdout
         .take()
@@ -127,6 +228,10 @@ fn spawn_backend(resource_dir: Option<PathBuf>) -> Result<Backend, Box<dyn Error
 
     if port == 0 || token.is_empty() {
         let _ = child.kill();
+        if let Some(mut process) = ollama.take() {
+            let _ = process.kill();
+            let _ = process.wait();
+        }
         return Err("the backend did not complete the handshake".into());
     }
 
@@ -134,6 +239,7 @@ fn spawn_backend(resource_dir: Option<PathBuf>) -> Result<Backend, Box<dyn Error
         port,
         token,
         child: Mutex::new(Some(child)),
+        ollama: Mutex::new(ollama),
     })
 }
 
@@ -150,6 +256,7 @@ fn main() {
                         port: 0,
                         token: String::new(),
                         child: Mutex::new(None),
+                        ollama: Mutex::new(None),
                     }
                 }
             };

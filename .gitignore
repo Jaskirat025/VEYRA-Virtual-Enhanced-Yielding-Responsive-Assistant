@@ -269,6 +269,7 @@ yarn-error.log*
 # Rust / Tauri
 src-tauri/target/
 src-tauri/gen/
+src-tauri/ollama/
 
 # Packaged backend sidecar
 dist-backend/

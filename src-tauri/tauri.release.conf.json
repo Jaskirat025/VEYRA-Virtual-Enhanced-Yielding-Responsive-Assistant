@@ -1,7 +1,8 @@
 {
   "bundle": {
     "resources": {
-      "../dist-backend/veyra-backend.exe": "veyra-backend.exe"
+      "../dist-backend/veyra-backend.exe": "veyra-backend.exe",
+      "ollama": "ollama"
     }
   }
 }

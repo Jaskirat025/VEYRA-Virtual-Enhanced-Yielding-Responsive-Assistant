@@ -73,7 +73,7 @@ Out of scope:
 
 - an attacker with administrator rights or physical access to an unlocked machine;
 - malware already running in the user's session;
-- a tampered Ollama binary or a malicious model file installed by the user;
+- a tampered bundled Ollama runtime or a malicious model file;
 - how third-party providers (online model API, GitHub) handle data they receive;
 - denial of service caused by the user's own machine being out of memory.
 

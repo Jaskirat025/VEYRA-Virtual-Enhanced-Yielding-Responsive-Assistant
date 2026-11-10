@@ -30,14 +30,14 @@ Why not three installers? One binary means one build to test, one signature, one
 
 - **Wake word → listen → transcribe → route → use tools → answer out loud.**
   Default wake word “Ehi Veyra”, changeable in Settings. Default name “Veyra”, also changeable.
-- **Local first.** A quantized 4B model through Ollama handles everyday requests with no network. Harder work can be escalated to an online model, with automatic fallback to the local one.
+- **Local first.** A quantized 4B model through the bundled Ollama runtime handles everyday requests with no network. Harder work can be escalated to an online model, with automatic fallback to the local one.
 - **Proactive mode (optional).** After an idle interval VEYRA can offer one short local check-in and speak timer reminders aloud. Proactive turns never use tools or external services; enable it in Settings.
 - **Real tools, not chat only.** Open and close applications, control volume and brightness, take screenshots, read and move files, calculate with SymPy, run sandboxed Python, read GitHub issues, and call your own REST APIs.
 - **WhatsApp without an unofficial client.** Prepare a message and open the official `wa.me` share page; the user reviews it and presses Send. VEYRA never automates a personal WhatsApp account.
 - **Any REST API as a tool.** Define custom endpoints for Exa, Claude, internal services or anything else in Settings. The local model can use them after confirmation; keys stay in Credential Manager and definitions never contain code.
 - **Risk-aware execution.** Every tool declares `SAFE`, `CONFIRM` or `DANGEROUS`. Destructive actions always ask first, with a clear summary.
 - **A HUD, not a chat box.** A central orb reacts to state (idle, listening, thinking, speaking, error), with real-time waveforms and a compact always-on-top widget.
-- **First-run downloads together.** The local Ollama model and the speech model start at the same time on first launch, with independent progress and retry. Ollama remains a user-installed prerequisite.
+- **First-run downloads together.** The portable Ollama runtime is bundled in the installer; the local model and the speech model start downloading automatically on first launch, with independent progress and retry. No separate Ollama installation is required.
 - **No telemetry, ever.** No connection is made that the user did not explicitly enable.
 
 ---
@@ -96,19 +96,19 @@ The Python process is packaged with PyInstaller as a Tauri sidecar: the shell st
 | --- | --- |
 | OS | Windows 10 21H2+ or Windows 11, 64-bit |
 | RAM | 8 GB total (VEYRA targets ≈ 4 GB) |
-| Storage | ≈ 5 GB free (models + application) |
+| Storage | ≈ 6 GB free (application, bundled runtime and models) |
 | Runtime | WebView2 (preinstalled on Windows 11, distributed to Windows 10; the installer verifies it) |
-| Local LLM | [Ollama](https://ollama.com), installed by the user |
-| Internet | Optional — only for online features the user enables |
+| Local LLM | Portable Ollama runtime bundled; model downloaded on first run |
+| Internet | Required for the first-run model download; optional afterwards |
 | Microphone | Optional — text input works without one |
 
-**Contributors:** Python 3.11, Node.js 20+, Rust stable with MSVC build tools, Ollama. See [Build from source](#build-from-source) for the commands.
+**Contributors:** Python 3.11, Node.js 20+, Rust stable with MSVC build tools, Ollama for local development (release builds bundle the portable runtime). See [Build from source](#build-from-source) for the commands.
 
 ---
 
 ## Build from source
 
-Prerequisites: Windows 10/11, Python 3.11, Node.js 20+, Rust stable with the MSVC build tools, Ollama, WebView2.
+Prerequisites: Windows 10/11, Python 3.11, Node.js 20+, Rust stable with the MSVC build tools, Ollama for local development, WebView2.
 
 ```powershell
 py -3.11 -m venv .venv
