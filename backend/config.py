@@ -268,6 +268,10 @@ class SettingsStore:
         tmp.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
         tmp.replace(self._path)
 
+    def delete(self) -> None:
+        """Remove the persisted settings so the next start is a clean install."""
+        self._path.unlink(missing_ok=True)
+
     def update(self, patch: dict[str, Any]) -> AppSettings:
         """Merge a partial settings patch and persist the result."""
         current = self.load().model_dump()

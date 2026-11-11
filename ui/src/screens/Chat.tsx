@@ -16,7 +16,7 @@ export function ChatScreen() {
     <div className="mx-auto flex h-full w-full max-w-content flex-col px-6 py-6">
       <div className="mb-4 flex items-baseline justify-between">
         <h1 className="font-display text-2xl tracking-wide text-silver-100">{t("chat.title")}</h1>
-        <span className="vy-label">{messages.length} MESSAGES</span>
+        <span className="vy-label">{t("chat.messages", { count: messages.length })}</span>
       </div>
 
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-2">

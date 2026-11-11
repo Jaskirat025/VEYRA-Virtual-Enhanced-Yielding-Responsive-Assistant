@@ -29,7 +29,7 @@ async def test_downloads_start_together_and_complete(tmp_path):
 
     manager = BootstrapManager(
         store,
-        runners={"local_model": runner, "speech_model": runner},
+        runners={"local_model": runner, "speech_model": runner, "voice_model": runner},
     )
 
     snapshot = await manager.start()
@@ -37,10 +37,10 @@ async def test_downloads_start_together_and_complete(tmp_path):
     assert snapshot["complete"] is False
 
     for _ in range(100):
-        if len(started) == 2:
+        if len(started) == 3:
             break
         await asyncio.sleep(0.01)
-    assert sorted(started) == ["local_model", "speech_model"]
+    assert sorted(started) == ["local_model", "speech_model", "voice_model"]
 
     gate.set()
     await wait_until_idle(manager)
@@ -53,7 +53,7 @@ async def test_downloads_start_together_and_complete(tmp_path):
 @pytest.mark.asyncio
 async def test_failed_job_can_retry_without_restarting_done_job(tmp_path):
     store = SettingsStore(tmp_path / "config.json")
-    attempts = {"local_model": 0, "speech_model": 0}
+    attempts = {"local_model": 0, "speech_model": 0, "voice_model": 0}
 
     async def runner(job, settings):
         attempts[job.id] += 1
@@ -63,7 +63,7 @@ async def test_failed_job_can_retry_without_restarting_done_job(tmp_path):
 
     manager = BootstrapManager(
         store,
-        runners={"local_model": runner, "speech_model": runner},
+        runners={"local_model": runner, "speech_model": runner, "voice_model": runner},
     )
 
     await manager.start()
@@ -75,4 +75,4 @@ async def test_failed_job_can_retry_without_restarting_done_job(tmp_path):
     result = manager.snapshot()
     assert result["complete"] is True
     assert result["failed"] is False
-    assert attempts == {"local_model": 2, "speech_model": 1}
+    assert attempts == {"local_model": 2, "speech_model": 1, "voice_model": 1}

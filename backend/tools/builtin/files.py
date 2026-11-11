@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+from backend.paths import is_within
 from backend.tools.external import wrap_external
 from backend.tools.registry import Category, Risk, ToolError, tool
 
@@ -38,7 +39,7 @@ def _user_path(raw: str, *, must_exist: bool = True) -> Path:
     except OSError as exc:
         raise ToolError(f"Invalid path: {exc}") from exc
 
-    if not str(path).startswith(str(_home())):
+    if not is_within(path, _home()):
         raise ToolError("Access outside the user folder is not allowed.")
     if must_exist and not path.exists():
         raise ToolError(f"Path not found: {path.name}")
@@ -96,7 +97,8 @@ def leggi_file(percorso: str, max_caratteri: int = 4000) -> str:
         raise ToolError("The path is not a file.")
     limit = max(100, min(20_000, int(max_caratteri)))
     try:
-        raw = path.read_bytes()
+        with path.open("rb") as handle:
+            raw = handle.read(max(8192, limit * 4))
     except OSError as exc:
         raise ToolError(f"Could not read the file: {exc}") from exc
     if b"\x00" in raw[:4096]:

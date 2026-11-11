@@ -1,48 +1,76 @@
-"""Text-to-speech: Piper with a pyttsx3 fallback."""
+"""Text-to-speech: Piper through its Python package, with a pyttsx3 fallback."""
 
 from __future__ import annotations
 
 import os
-import shutil
-import subprocess
 import tempfile
 import threading
+import wave
 from pathlib import Path
 
 from backend.config import VoiceSettings
+from backend.paths import voices_dir
+
+DEFAULT_VOICES: dict[str, tuple[str, str]] = {
+    "en": ("en_US-lessac-medium", "en/en_US/lessac/medium"),
+    "it": ("it_IT-paola-medium", "it/it_IT/paola/medium"),
+    "zh": ("zh_CN-huayan-medium", "zh/zh_CN/huayan/medium"),
+}
 
 
 class SpeechUnavailable(RuntimeError):
     """Raised when no speech engine can produce audio."""
 
 
-def piper_available(settings: VoiceSettings) -> bool:
-    return bool(
-        shutil.which("piper")
-        and settings.piper_voice
-        and Path(settings.piper_voice).expanduser().is_file()
-    )
+def voice_name(language: str) -> str:
+    return DEFAULT_VOICES.get(language, DEFAULT_VOICES["en"])[0]
 
 
-def _piper(settings: VoiceSettings, text: str) -> bytes:
-    binary = shutil.which("piper")
-    voice = Path(settings.piper_voice).expanduser()
-    if not binary or not voice.is_file():
-        raise SpeechUnavailable("Piper or its voice model is missing.")
+def voice_relative_path(language: str) -> str:
+    return DEFAULT_VOICES.get(language, DEFAULT_VOICES["en"])[1]
+
+
+def default_voice_path(language: str) -> Path:
+    return voices_dir() / f"{voice_name(language)}.onnx"
+
+
+def voice_path(settings: VoiceSettings, language: str = "en") -> Path:
+    configured = settings.piper_voice.strip()
+    if configured:
+        return Path(configured).expanduser()
+    return default_voice_path(language)
+
+
+def piper_available(settings: VoiceSettings, language: str = "en") -> bool:
+    if settings.engine != "piper":
+        return False
+    try:
+        import piper  # noqa: F401
+    except ImportError:
+        return False
+    return voice_path(settings, language).is_file()
+
+
+def _piper(settings: VoiceSettings, language: str, text: str) -> bytes:
+    voice_file = voice_path(settings, language)
+    if not voice_file.is_file():
+        raise SpeechUnavailable("The Piper voice model is missing.")
+
+    try:
+        from piper import PiperVoice
+    except ImportError as exc:
+        raise SpeechUnavailable("The Piper speech package is not installed.") from exc
 
     with tempfile.TemporaryDirectory(prefix="veyra-tts-") as folder:
         output = Path(folder) / "speech.wav"
         try:
-            completed = subprocess.run(
-                [binary, "--model", str(voice), "--output_file", str(output)],
-                input=text.encode("utf-8"),
-                capture_output=True,
-                timeout=60,
-            )
-        except (OSError, subprocess.TimeoutExpired) as exc:
-            raise SpeechUnavailable(f"Piper failed: {exc}") from exc
-        if completed.returncode != 0 or not output.exists():
-            raise SpeechUnavailable("Piper could not synthesise the answer.")
+            voice = PiperVoice.load(str(voice_file))
+            with wave.open(str(output), "wb") as wav_file:
+                voice.synthesize_wav(text, wav_file)
+        except Exception as exc:
+            raise SpeechUnavailable(f"Piper could not synthesise the answer: {exc}") from exc
+        if not output.exists():
+            raise SpeechUnavailable("Piper did not produce an audio file.")
         return output.read_bytes()
 
 
@@ -75,7 +103,7 @@ def _pyttsx3(settings: VoiceSettings, text: str) -> bytes:
         return output.read_bytes()
 
 
-def synthesize(text: str, settings: VoiceSettings) -> bytes:
+def synthesize(text: str, settings: VoiceSettings, language: str = "en") -> bytes:
     clean = text.strip()
     if not clean:
         raise SpeechUnavailable("There is nothing to say.")
@@ -83,8 +111,8 @@ def synthesize(text: str, settings: VoiceSettings) -> bytes:
     if len(clean) > 1200:
         clean = clean[:1200].rsplit(" ", 1)[0] + "."
 
-    if settings.engine == "piper" and piper_available(settings):
-        return _piper(settings, clean)
+    if settings.engine == "piper" and piper_available(settings, language):
+        return _piper(settings, language, clean)
     if os.name == "nt" or settings.engine == "pyttsx3":
         return _pyttsx3(settings, clean)
     raise SpeechUnavailable("No speech engine is available on this system.")

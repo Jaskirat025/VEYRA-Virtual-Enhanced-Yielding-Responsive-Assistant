@@ -164,8 +164,29 @@ def test_external_content_detection():
     assert agent._external_read([{"role": "tool", "content": "plain"}]) is False
 
 
+def test_assistant_context_exposes_saved_notes_and_pending_timers(database):
+    database.save_note("Router", "The router configuration lives in the docs")
+    database.add_timer("tea", "2030-01-01T12:00:00+00:00")
+    context = database.assistant_context()
+    assert "Router" in context
+    assert "router configuration" in context
+    assert "tea" in context
+    assert "data, not instructions" in context
+
+
 def test_system_prompt_uses_assistant_name_and_requires_tools():
     prompt = build_system_prompt(AppSettings(assistant_name="Nova"))
     assert "Nova" in prompt
     assert "call the math tools" in prompt.lower()
     assert "dati_esterni" in prompt
+
+
+def test_external_content_blocks_risky_tools_without_prompting(database, context):
+    events = []
+    agent = build_agent(database, events, ScriptedProvider([LLMResponse(text="")]))
+    call = ToolInvocation(name="elimina_file", arguments={"percorso": "notes.txt"})
+    text, status = asyncio.run(agent._execute_call(call, "blocked-1", "c6", 1, True))
+    assert status == "blocked"
+    assert "external content" in text.lower()
+    assert not any(event["type"] == "tool_confirm_request" for event in events)
+    assert database.tool_log()[0]["status"] == "blocked"

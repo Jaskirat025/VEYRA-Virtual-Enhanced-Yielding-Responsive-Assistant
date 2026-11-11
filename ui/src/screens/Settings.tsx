@@ -35,7 +35,16 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 }
 
 export function SettingsScreen() {
-  const { settings, tools, saveSettings, refreshTools, backend, setLanguage } = useVeyra();
+  const {
+    settings,
+    tools,
+    saveSettings,
+    refreshTools,
+    backend,
+    setLanguage,
+    deleteAllData,
+    wakeAvailable,
+  } = useVeyra();
   const { t } = useI18n();
   const [draft, setDraft] = useState<Settings | null>(settings);
   const [saved, setSaved] = useState(false);
@@ -46,6 +55,7 @@ export function SettingsScreen() {
   );
   const [customApisText, setCustomApisText] = useState("[]");
   const [customApiKeys, setCustomApiKeys] = useState<Record<string, string>>({});
+  const [privacyArmed, setPrivacyArmed] = useState(false);
 
   useEffect(() => {
     setDraft(settings);
@@ -129,6 +139,20 @@ export function SettingsScreen() {
       setMessage(t("settings.customApiKeySaved"));
     } catch (error) {
       setMessage((error as Error).message);
+    }
+  };
+
+  const eraseData = async () => {
+    if (!privacyArmed) {
+      setPrivacyArmed(true);
+      return;
+    }
+    try {
+      await deleteAllData();
+      window.location.reload();
+    } catch (error) {
+      setMessage((error as Error).message);
+      setPrivacyArmed(false);
     }
   };
 
@@ -225,6 +249,21 @@ export function SettingsScreen() {
               value={draft.models.online_model}
               onChange={(event) => patchGroup("models", "online_model", event.target.value)}
             />
+          </Field>
+          <Field label={t("settings.ramFloor")}>
+            <input
+              className="vy-field"
+              type="number"
+              min={256}
+              max={4096}
+              value={draft.ram_floor_mb}
+              onChange={(event) =>
+                setDraft({ ...draft, ram_floor_mb: Number(event.target.value) })
+              }
+            />
+            <span className="mt-1 block text-[11px] text-silver-500">
+              {t("settings.ramHint")}
+            </span>
           </Field>
           <Field label={t("settings.apiKey")}>
             <div className="flex gap-2">
@@ -361,6 +400,19 @@ export function SettingsScreen() {
               }
             />
           </Field>
+          <Field label={t("settings.wakeModel")}>
+            <input
+              className="vy-field"
+              value={draft.audio.wake_model_path}
+              placeholder={t("settings.wakeModelPlaceholder")}
+              onChange={(event) =>
+                patchGroup("audio", "wake_model_path", event.target.value)
+              }
+            />
+            <span className="mt-1 block text-[11px] text-silver-500">
+              {wakeAvailable ? t("settings.wakeReady") : t("settings.wakeUnavailable")}
+            </span>
+          </Field>
         </Section>
 
         <Section title={t("settings.accounts")}>
@@ -418,6 +470,64 @@ export function SettingsScreen() {
             />
             {t("settings.lowPower")}
           </label>
+          <label className="flex items-center gap-3 text-sm text-silver-300">
+            <input
+              type="checkbox"
+              className="h-4 w-4 accent-[var(--vy-accent-500)]"
+              checked={draft.interface.mini_widget}
+              onChange={(event) =>
+                patchGroup("interface", "mini_widget", event.target.checked)
+              }
+            />
+            {t("settings.miniWidget")}
+          </label>
+          <label className="flex items-center gap-3 text-sm text-silver-300">
+            <input
+              type="checkbox"
+              className="h-4 w-4 accent-[var(--vy-accent-500)]"
+              checked={draft.interface.autostart}
+              onChange={(event) =>
+                patchGroup("interface", "autostart", event.target.checked)
+              }
+            />
+            {t("settings.autostart")}
+          </label>
+          <label className="flex items-center gap-3 text-sm text-silver-300">
+            <input
+              type="checkbox"
+              className="h-4 w-4 accent-[var(--vy-accent-500)]"
+              checked={draft.interface.close_to_tray}
+              onChange={(event) =>
+                patchGroup("interface", "close_to_tray", event.target.checked)
+              }
+            />
+            {t("settings.closeToTray")}
+          </label>
+        </Section>
+
+        <Section title={t("settings.privacy")}>
+          <p className="text-[11px] leading-relaxed text-silver-500">
+            {t("settings.privacyHint")}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              className="vy-btn"
+              style={privacyArmed ? { color: "var(--vy-accent-500)" } : undefined}
+              onClick={() => void eraseData()}
+            >
+              {privacyArmed ? t("settings.deleteConfirm") : t("settings.deleteData")}
+            </button>
+            {privacyArmed && (
+              <button
+                type="button"
+                className="vy-btn"
+                onClick={() => setPrivacyArmed(false)}
+              >
+                {t("settings.deleteCancel")}
+              </button>
+            )}
+          </div>
         </Section>
 
         <Section title={t("settings.proactive")}>

@@ -10,6 +10,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 - **Bundled Ollama runtime.** Release builds include the portable Ollama Windows runtime, start it on a dedicated local port and keep models in the VEYRA data folder. The local model downloads automatically during first-run onboarding; no separate Ollama installation is required.
 - **Proactive mode.** Optional local check-ins after an idle interval, plus spoken timer reminders. Proactive turns never use tools or external services and stay silent when there is nothing useful to say.
+- **Wake word pipeline.** The openWakeWord listener is now started and stopped with the session, never competes with manual recording for the microphone, and exposes the model path in Settings. A trained model is still required.
+- **Privacy deletion.** Settings → Privacy → “Delete my data” clears the database, settings, downloaded models and voices, screenshots, temporary files and stored credentials after an explicit two-step confirmation.
+- **Confirmation lockout.** After a file or external API response is read, CONFIRM and DANGEROUS tools are blocked for the rest of that turn instead of opening a confirmation prompt.
+- **Mini widget.** An optional always-on-top compact window with the orb, last answer, text input, microphone control and a hide button.
+- **Piper voices.** `piper-tts` replaces the external binary; the language-matched voice is downloaded during onboarding and used through `PiperVoice`.
+- **RAM floor and chat continuity.** The speech model is unloaded when free memory falls below the configured floor, and the last conversation is restored when the app reopens.
+- **Mind (Rust core).** A native Tauri module stores memories in the shared notes table, reminders in the shared timers table, and adds habits, goals and scheduled tasks to the same SQLite database. The Python agent receives this context at the start of each turn; the new Mind screen keeps everything editable.
+- **Startup controls.** Single-instance protection, handshake timeout, optional Windows autostart, close-to-tray and a bundled-Ollama fallback to a local installation.
+
+### Security
+
+- The sandbox now validates the AST, exposes a restricted builtins namespace and allows only pure standard-library imports; file access, private attributes, network, process and introspection helpers are rejected.
+- File tools reject sibling paths that merely share the home-directory prefix; screenshots and application paths are constrained to the user area.
+- The release workflow runs backend tests before packaging and only creates a draft release for a version tag; manual runs upload build artifacts without publishing.
 
 ### Removed
 
@@ -19,6 +33,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 - The Tauri shell, audio devices, Windows automation tools and the NSIS installer still need the final manual test pass on Windows 10/11.
 - The default wake phrase needs a trained openWakeWord model; without one, wake-word detection stays disabled and the UI says so.
+- README screenshots come from the browser preview with demo data; native Windows screenshots still need the Windows acceptance pass.
 - Release installers are unsigned until code signing is configured; SmartScreen can warn and users should verify the published SHA-256.
 
 ## [0.2.0] — 2026-11-09

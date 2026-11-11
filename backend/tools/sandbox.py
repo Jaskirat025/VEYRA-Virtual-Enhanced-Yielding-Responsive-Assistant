@@ -1,10 +1,12 @@
 """Sandboxed Python execution for the ``esegui_python`` tool.
 
 The child process runs isolated (``-I``), in a temporary directory, with a
-stripped environment, a wall-clock timeout and a best-effort import/network
-block list. This is a pragmatic sandbox, not a security boundary against a
-determined attacker; it exists so a model-generated snippet cannot casually
-read user files or reach the network.
+stripped environment and a wall-clock timeout. Model-generated code is checked
+before it runs: only a small set of pure-standard-library imports is accepted,
+dunder attributes are rejected, and the execution namespace has no file,
+process, network or introspection helpers. This is a pragmatic sandbox, not a
+claim of perfect isolation against a determined attacker; it is deliberately
+closed by default so ordinary snippets cannot touch user files or the network.
 """
 
 from __future__ import annotations
@@ -21,30 +23,75 @@ except ImportError:  # pragma: no cover - Windows
     resource = None  # type: ignore[assignment]
 
 RUNNER = """\
+import ast
+import builtins
 import sys
 
-BLOCKED = {
-    "ctypes", "ftplib", "http", "multiprocessing", "requests", "smtplib",
-    "socket", "subprocess", "telnetlib", "urllib", "winreg",
+ALLOWED_IMPORTS = {
+    "collections", "datetime", "decimal", "fractions", "functools",
+    "itertools", "json", "math", "random", "re", "statistics", "string",
+    "textwrap", "time", "typing", "unicodedata",
+}
+BLOCKED_NAMES = {
+    "__builtins__", "__import__", "open", "eval", "exec", "compile",
+    "input", "getattr", "setattr", "delattr", "globals", "locals", "vars",
+    "breakpoint", "help", "exit", "quit",
 }
 
 
-class _Blocker:
-    def find_spec(self, fullname, path=None, target=None):
-        if fullname.split(".")[0] in BLOCKED:
-            raise ImportError(
-                "This module is disabled inside the Veyra sandbox: " + fullname
-            )
-        return None
+class _Validator(ast.NodeVisitor):
+    def _check_module(self, name):
+        root = name.split(".")[0]
+        if root not in ALLOWED_IMPORTS:
+            raise SyntaxError("This import is disabled inside the Veyra sandbox: " + name)
+
+    def visit_Import(self, node):
+        for alias in node.names:
+            self._check_module(alias.name)
+        self.generic_visit(node)
+
+    def visit_ImportFrom(self, node):
+        if node.level:
+            raise SyntaxError("Relative imports are disabled inside the Veyra sandbox.")
+        self._check_module(node.module or "")
+        self.generic_visit(node)
+
+    def visit_Name(self, node):
+        if node.id in BLOCKED_NAMES:
+            raise SyntaxError("This name is disabled inside the Veyra sandbox: " + node.id)
+        self.generic_visit(node)
+
+    def visit_Attribute(self, node):
+        if node.attr.startswith("__"):
+            raise SyntaxError("Private attributes are disabled inside the Veyra sandbox.")
+        self.generic_visit(node)
 
 
-sys.meta_path.insert(0, _Blocker())
+def _safe_import(name, globals=None, locals=None, fromlist=(), level=0):
+    if level:
+        raise ImportError("Relative imports are disabled inside the Veyra sandbox.")
+    if name.split(".")[0] not in ALLOWED_IMPORTS:
+        raise ImportError("This module is disabled inside the Veyra sandbox: " + name)
+    return __import__(name, globals, locals, fromlist, 0)
+
+
+safe_builtins = {
+    name: value
+    for name, value in vars(builtins).items()
+    if name not in BLOCKED_NAMES and not name.startswith("__")
+}
+safe_builtins["__build_class__"] = builtins.__build_class__
+safe_builtins["__import__"] = _safe_import
 
 target = sys.argv[1]
 with open(target, encoding="utf-8") as handle:
     source = handle.read()
+
+tree = ast.parse(source, filename="sandbox.py")
+_Validator().visit(tree)
+
 sys.argv = ["sandbox"]
-exec(compile(source, "sandbox.py", "exec"), {"__name__": "__main__"})
+exec(compile(tree, "sandbox.py", "exec"), {"__name__": "__main__", "__builtins__": safe_builtins})
 """
 
 

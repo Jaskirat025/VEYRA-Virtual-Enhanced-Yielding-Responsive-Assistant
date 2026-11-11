@@ -27,7 +27,7 @@ export function StatusBar() {
       </span>
       <span aria-hidden="true" className="hidden h-3 w-px bg-white/10 md:inline-block" />
       <span className="hidden md:inline">
-        {health?.online_enabled ? "LOCAL + ONLINE" : t("status.local")}
+        {health?.online_enabled ? t("status.hybrid") : t("status.local")}
       </span>
       <span className="ml-auto flex items-center gap-3">
         {settings?.interface.low_power && (

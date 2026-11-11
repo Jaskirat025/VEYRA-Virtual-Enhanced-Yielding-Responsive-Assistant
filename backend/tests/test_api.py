@@ -77,7 +77,7 @@ def test_bootstrap_status_lists_both_downloads(tmp_path):
     assert response.status_code == 200
     data = response.json()
     assert data["running"] is False
-    assert {job["id"] for job in data["jobs"]} == {"local_model", "speech_model"}
+    assert {job["id"] for job in data["jobs"]} == {"local_model", "speech_model", "voice_model"}
 
 
 def test_custom_api_secret_is_accepted(tmp_path):

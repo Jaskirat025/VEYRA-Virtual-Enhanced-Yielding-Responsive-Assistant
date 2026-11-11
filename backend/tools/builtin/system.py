@@ -9,7 +9,7 @@ import time
 from pathlib import Path
 from typing import Literal
 
-from backend.paths import app_data_dir
+from backend.paths import app_data_dir, is_within
 from backend.tools.registry import Category, Risk, ToolError, tool
 
 
@@ -40,7 +40,15 @@ def apri_app(nome: str) -> str:
     if not target:
         raise ToolError("The application name is empty.")
 
+    if "://" in target:
+        raise ToolError("Opening URLs through this tool is not allowed.")
+
     executable = shutil.which(target)
+    if not executable and Path(target).is_absolute():
+        candidate = Path(target).expanduser().resolve(strict=False)
+        if not is_within(candidate, Path.home().resolve()):
+            raise ToolError("Opening files outside the user folder is not allowed.")
+        target = str(candidate)
     try:
         if executable:
             subprocess.Popen([executable], close_fds=True)
@@ -162,6 +170,16 @@ def screenshot(percorso: str = "") -> str:
     mss = _import("mss", "mss is not installed.")
     if percorso.strip():
         destination = Path(percorso).expanduser()
+        if not destination.is_absolute():
+            destination = Path.home() / destination
+        destination = destination.resolve(strict=False)
+        allowed_roots = (Path.home().resolve(), app_data_dir().resolve())
+        if not any(is_within(destination, root) for root in allowed_roots):
+            raise ToolError("Screenshots can only be saved inside the user folder.")
+        if destination.suffix.lower() != ".png":
+            raise ToolError("The screenshot path must end in .png.")
+        if destination.exists():
+            raise ToolError("The screenshot destination already exists; choose another name.")
     else:
         folder = app_data_dir() / "screenshots"
         folder.mkdir(parents=True, exist_ok=True)

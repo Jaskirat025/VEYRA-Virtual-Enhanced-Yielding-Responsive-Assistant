@@ -67,7 +67,9 @@ No icon font is planned; icons are inline SVG drawn in-house to keep the bundle 
 | sounddevice | Audio capture | MIT | PortAudio binding |
 | PortAudio | Audio I/O | MIT | |
 | Piper | Text-to-speech | MIT | |
-| Piper voice models | Voices | varies per voice | **not bundled**: downloaded on demand, only voices whose license permits redistribution/use are offered |
+| piper-tts | Python Piper API and models loader | MIT | installed from `backend/requirements-windows.txt` |
+| piper-phonemize | Phoneme conversion used by Piper | MIT | transitive dependency of `piper-tts` |
+| Piper voice models | Voices | varies per voice | **not bundled**: downloaded from the pinned `rhasspy/piper-voices` revision; only voices whose license permits use are selected |
 | pyttsx3 | TTS fallback | MPL-2.0 | unmodified, used only when Piper is unavailable |
 | NumPy | Numerics | BSD-3-Clause | |
 | SciPy | Numerics for sandbox | BSD-3-Clause | |
@@ -89,7 +91,7 @@ No icon font is planned; icons are inline SVG drawn in-house to keep the bundle 
 | pyautogui | Keyboard and mouse control | BSD-3-Clause | |
 | pywinauto | Window management | BSD-3-Clause | |
 | mss | Screenshots | MIT | |
-| SQLite (via `sqlite3`) | Local memory | Public domain | stdlib module |
+| SQLite (via `sqlite3` and `rusqlite`) | Local memory and the Rust Mind core | Public domain | Python stdlib; Rust crate `rusqlite` with bundled SQLite |
 
 ## Integrations (optional, user-configured)
 
@@ -114,7 +116,7 @@ The three typefaces are distributed under the SIL Open Font License 1.1. Their `
 
 ## Voice and model assets
 
-Speech models are **downloaded by the user at runtime**, not committed and not shipped in the installer. This keeps the repository small, avoids redistributing weights with unclear provenance, and lets the license of each voice be checked individually. The download screen in onboarding shows the license and source of every asset before it is fetched.
+Speech models are **downloaded by the user at runtime**, not committed and not shipped in the installer. This keeps the repository small, avoids redistributing weights with unclear provenance, and lets the license of each voice be checked individually. The onboarding download screen identifies each asset; the pinned source revision and the per-voice license are recorded in this file and in the release notes before publication.
 
 ## Attribution in the application
 

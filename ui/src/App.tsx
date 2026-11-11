@@ -7,6 +7,7 @@ import { TitleBar } from "./components/TitleBar";
 import { useVeyra } from "./lib/useVeyra";
 import type { View } from "./lib/types";
 import { useI18n } from "./i18n";
+import { AssistantScreen } from "./screens/Assistant";
 import { ChatScreen } from "./screens/Chat";
 import { HomeScreen } from "./screens/Home";
 import { Onboarding } from "./screens/Onboarding";
@@ -28,7 +29,7 @@ export default function App() {
         <main className="vy-grid relative min-w-0 flex-1 overflow-y-auto">
           {onboarded === null ? (
             <div className="flex h-full items-center justify-center">
-              <span className="vy-label animate-pulse">INITIALISING</span>
+              <span className="vy-label animate-pulse">{t("app.initialising")}</span>
             </div>
           ) : !onboarded ? (
             <Onboarding />
@@ -44,6 +45,7 @@ export default function App() {
               >
                 {view === "home" && <HomeScreen />}
                 {view === "chat" && <ChatScreen />}
+                {view === "assistant" && <AssistantScreen />}
                 {view === "tools" && <ToolLogScreen />}
                 {view === "settings" && <SettingsScreen />}
               </motion.div>
