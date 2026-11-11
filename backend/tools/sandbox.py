@@ -87,8 +87,12 @@ target = sys.argv[1]
 with open(target, encoding="utf-8") as handle:
     source = handle.read()
 
-tree = ast.parse(source, filename="sandbox.py")
-_Validator().visit(tree)
+try:
+    tree = ast.parse(source, filename="sandbox.py")
+    _Validator().visit(tree)
+except SyntaxError as error:
+    print("Sandbox error: " + str(error))
+    raise SystemExit(1) from None
 
 sys.argv = ["sandbox"]
 exec(compile(tree, "sandbox.py", "exec"), {"__name__": "__main__", "__builtins__": safe_builtins})

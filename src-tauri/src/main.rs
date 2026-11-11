@@ -186,8 +186,7 @@ fn python_command() -> Result<Command, Box<dyn Error>> {
         current
     } else if current
         .parent()
-        .map(|parent| parent.join("backend").is_dir())
-        .unwrap_or(false)
+        .is_some_and(|parent| parent.join("backend").is_dir())
     {
         current.parent().map(Path::to_path_buf).unwrap_or(current)
     } else {
@@ -290,7 +289,8 @@ fn spawn_backend(resource_dir: Option<PathBuf>) -> Result<Backend, Box<dyn Error
 
     let handshake = receiver
         .recv_timeout(Duration::from_secs(30))
-        .unwrap_or(None);
+        .ok()
+        .flatten();
     let (port, token) = match handshake {
         Some((port, token)) if port > 0 && !token.is_empty() => (port, token),
         _ => (0, String::new()),
@@ -350,10 +350,9 @@ fn main() {
         .setup(|app| {
             let assistant_path = veyra_data_dir().join("veyra.db");
             let assistant = AssistantCore::open(&assistant_path).map_err(|error| {
-                std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    format!("could not initialise the Rust assistant core: {error}"),
-                )
+                std::io::Error::other(format!(
+                    "could not initialise the Rust assistant core: {error}"
+                ))
             })?;
             app.manage(assistant);
 
