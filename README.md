@@ -1,11 +1,27 @@
 # VEYRA
 
+[![VEYRA CI](https://github.com/Jaskirat025/VEYRA-Virtual-Enhanced-Yielding-Responsive-Assistant/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Jaskirat025/VEYRA-Virtual-Enhanced-Yielding-Responsive-Assistant/actions/workflows/ci.yml)
+
 **Virtual Enhanced Yielding Responsive Assistant** — a local-first, proactive AI assistant for Windows.
 
 VEYRA is a desktop application, not a script: a frameless HUD window, a tray icon, an animated core, voice input and speech output, and an agentic tool layer that can actually operate your PC — while keeping as much processing as possible on your machine.
 
-> **Status: 1.0.0 — release candidate.**
-> Backend, interface, desktop shell, tool layer, voice pipeline, installer pipeline and CI are in place. The Python brain and the React interface are covered by automated checks in this environment; Windows-only shell, audio devices and the NSIS installer still need a real Windows test pass (see [installation](docs/installation.md)).
+> **Status: 1.0.0 — release candidate, feature-complete.**
+> Backend, interface, desktop shell, tool layer, voice pipeline, installer pipeline and CI are in place. The source is feature-complete; the Windows-only shell, audio devices and the NSIS installer still need a real Windows test pass before the 1.0.0 tag (see [installation](docs/installation.md)). Wake-word detection requires a trained openWakeWord model; without one VEYRA stays in push-to-talk mode.
+
+## A first look
+
+<p align="center">
+  <img src="docs/assets/veyra-home.png" alt="VEYRA home screen with the animated core and command bar" width="760">
+</p>
+<p align="center"><em>The HUD home screen: live status, the animated core, and one command bar for text or voice.</em></p>
+
+<p align="center">
+  <img src="docs/assets/veyra-mind.png" alt="VEYRA Mind screen with memories, reminders, habits, goals and scheduled tasks" width="760">
+</p>
+<p align="center"><em>Mind: memory, reminders, habits, goals and scheduled work in one local workspace.</em></p>
+
+<sub>These are browser-preview captures with demo data. The Windows build starts the local Python sidecar and uses the native Rust Mind core; see [Build from source](#build-from-source).</sub>
 
 ---
 
@@ -29,15 +45,16 @@ Why not three installers? One binary means one build to test, one signature, one
 ## What VEYRA is meant to do
 
 - **Wake word → listen → transcribe → route → use tools → answer out loud.**
-  Default wake word “Ehi Veyra”, changeable in Settings. Default name “Veyra”, also changeable.
+  Default wake word “Ehi Veyra”, changeable in Settings, with a trained openWakeWord model selected in Settings → Audio. Default name “Veyra”, also changeable.
 - **Local first.** A quantized 4B model through the bundled Ollama runtime handles everyday requests with no network. Harder work can be escalated to an online model, with automatic fallback to the local one.
 - **Proactive mode (optional).** After an idle interval VEYRA can offer one short local check-in and speak timer reminders aloud. Proactive turns never use tools or external services; enable it in Settings.
+- **A native memory core.** The Rust shell owns memories, reminders, habits, goals and scheduled tasks in the same `veyra.db` as the Python brain. Notes and timers are shared with the existing agent tools; habits and goals are injected into the agent's system context.
 - **Real tools, not chat only.** Open and close applications, control volume and brightness, take screenshots, read and move files, calculate with SymPy, run sandboxed Python, read GitHub issues, and call your own REST APIs.
 - **WhatsApp without an unofficial client.** Prepare a message and open the official `wa.me` share page; the user reviews it and presses Send. VEYRA never automates a personal WhatsApp account.
 - **Any REST API as a tool.** Define custom endpoints for Exa, Claude, internal services or anything else in Settings. The local model can use them after confirmation; keys stay in Credential Manager and definitions never contain code.
 - **Risk-aware execution.** Every tool declares `SAFE`, `CONFIRM` or `DANGEROUS`. Destructive actions always ask first, with a clear summary.
-- **A HUD, not a chat box.** A central orb reacts to state (idle, listening, thinking, speaking, error), with real-time waveforms and a compact always-on-top widget.
-- **First-run downloads together.** The portable Ollama runtime is bundled in the installer; the local model and the speech model start downloading automatically on first launch, with independent progress and retry. No separate Ollama installation is required.
+- **A HUD, not a chat box.** A central orb reacts to state (idle, listening, thinking, speaking, error), with real-time waveforms and an always-on-top mini widget that can be enabled in Settings.
+- **First-run downloads together.** The portable Ollama runtime is bundled in the installer; the local model, the speech model and the language-matched Piper voice start downloading automatically on first launch, with independent progress and retry. No separate Ollama installation is required.
 - **No telemetry, ever.** No connection is made that the user did not explicitly enable.
 
 ---
@@ -62,10 +79,11 @@ Why not three installers? One binary means one build to test, one signature, one
 │  · frameless window + custom title bar       │
 │  · tray icon · close to tray                 │
 │  · starts and stops the Python sidecar       │
+│  · native Mind core (shared veyra.db)        │
 │  ┌────────────────────────────────────────┐  │
 │  │ React + TypeScript UI                  │  │
-│  │  Home · Chat · Tool log · Settings     │  │
-│  │  Onboarding · Orb · Waveform           │  │
+│  │  Home · Chat · Mind · Tool log         │  │
+│  │  Settings · Onboarding · Orb           │  │
 │  └────────────────────────────────────────┘  │
 └───────────────────┬──────────────────────────┘
                     │ WebSocket, 127.0.0.1, random port, per-run token
@@ -76,6 +94,7 @@ Why not three installers? One binary means one build to test, one signature, one
 │  brain:  Ollama client · online client       │
 │  tools:  registry, risk levels, pre-filter   │
 │  memory: SQLite in %APPDATA%\Veyra           │
+│          + Rust assistant core (Tauri)       │
 └───────────────────┬──────────────────────────┘
                     │ HTTP, loopback
               ┌─────▼──────┐        ┌────────────────────┐
@@ -136,9 +155,11 @@ Nothing is written into the installation folder.
 | Location | Contents |
 | --- | --- |
 | `%APPDATA%\Veyra\config.json` | settings (no secrets) |
-| `%APPDATA%\Veyra\veyra.db` | SQLite: notes, chat history, timers, tool log |
+| `%APPDATA%\Veyra\veyra.db` | SQLite: notes, chat history, timers, habits, goals, scheduled tasks, tool log |
 | `%APPDATA%\Veyra\logs\` | rotating local logs, redacted |
 | `%APPDATA%\Veyra\models\` | downloaded speech models, never committed |
+| `%APPDATA%\Veyra\voices\` | downloaded Piper voices, never committed |
+| `%APPDATA%\Veyra\ollama\models\` | downloaded local LLM weights, never committed |
 | Windows Credential Manager | API keys, integration tokens, session secrets |
 
 ---
@@ -150,7 +171,8 @@ Nothing is written into the installation folder.
 - **Two-step tool risk model** with explicit confirmation dialogs, and a confirmation lockout after reading untrusted external content in the same turn.
 - **Prompt-injection aware ingestion**: web and file content is wrapped in `<dati_esterni fonte="...">` blocks marked as data, not instructions.
 - **Custom APIs are explicit**: only configured base URLs are reachable, every call is `CONFIRM`, keys are stored separately, and responses are wrapped as external data.
-- **Sandboxed Python**: separate process, timeout, no network, no access to user documents.
+- **Hardened Python sandbox**: separate process, timeout, restricted builtins, an import allowlist and no file, process or network helpers.
+- **Privacy controls**: “Delete my data” clears conversations, notes, timers, habits, goals, scheduled tasks, tool logs, settings, downloaded models and stored credentials after an explicit confirmation.
 - **Minimal Tauri allowlist** and a restrictive Content Security Policy.
 - **No telemetry, no analytics, no auto-update pings.**
 
@@ -162,10 +184,10 @@ Full policy and reporting process: [SECURITY.md](SECURITY.md).
 
 ```
 veyra/
-├── src-tauri/            Rust desktop shell (Phase 4+)
-├── ui/                   React + TypeScript interface (Phase 4+)
-├── backend/              Python brain and audio pipeline (Phase 1+)
-├── docs/                 installation, languages, design system, tools, custom APIs
+├── src-tauri/            Rust desktop shell + native Mind core
+├── ui/                   React + TypeScript interface
+├── backend/              Python brain and audio pipeline
+├── docs/                 installation, languages, design system, tools, custom APIs, screenshots
 ├── scripts/              repository tooling (hygiene gate)
 ├── .github/workflows/    CI and the Windows installer release pipeline
 ├── .env.example          fake values only — copy to .env for local dev
@@ -198,6 +220,7 @@ Each source directory contains a `README.md` describing its planned layout until
 | 10 | Settings, onboarding, tool log, i18n EN/IT/ZH | implemented |
 | 11 | Python sandbox and UI automation tools | implemented, Windows test pending |
 | 12 | Installer, GitHub Actions release, final documentation | release 1.0.0 prepared, Windows validation pending |
+| 13 | Rust Mind core: shared memories, reminders, habits, goals and scheduled tasks | implemented, Windows test pending |
 
 Each phase ends with install commands, a manual test script, Windows troubleshooting notes and a check for personal data and secrets.
 

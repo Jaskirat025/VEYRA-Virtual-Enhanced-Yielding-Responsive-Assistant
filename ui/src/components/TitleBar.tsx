@@ -43,7 +43,7 @@ export function TitleBar() {
       <div className="flex items-center gap-1">
         <button
           type="button"
-          aria-label="Minimize"
+          aria-label={t("app.minimise")}
           className="flex h-8 w-9 items-center justify-center text-silver-400 transition-colors hover:bg-white/5 hover:text-silver-100"
           onClick={() => void windowAction("minimize")}
         >
@@ -53,7 +53,7 @@ export function TitleBar() {
         </button>
         <button
           type="button"
-          aria-label="Maximize"
+          aria-label={t("app.maximise")}
           className="flex h-8 w-9 items-center justify-center text-silver-400 transition-colors hover:bg-white/5 hover:text-silver-100"
           onClick={() => void windowAction("maximize")}
         >
@@ -63,7 +63,7 @@ export function TitleBar() {
         </button>
         <button
           type="button"
-          aria-label="Close"
+          aria-label={t("app.close")}
           className="flex h-8 w-9 items-center justify-center text-silver-400 transition-colors hover:bg-accent/90 hover:text-accent-ink"
           onClick={() => void windowAction("close")}
         >

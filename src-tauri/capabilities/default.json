@@ -1,13 +1,14 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Minimal capability for the main window: window controls and the custom title bar only.",
-  "windows": ["main"],
+  "description": "Minimal capability for the main and mini windows: window controls and dragging only.",
+  "windows": ["main", "mini"],
   "permissions": [
     "core:default",
     "core:window:allow-minimize",
     "core:window:allow-toggle-maximize",
     "core:window:allow-close",
+    "core:window:allow-hide",
     "core:window:allow-start-dragging"
   ]
 }

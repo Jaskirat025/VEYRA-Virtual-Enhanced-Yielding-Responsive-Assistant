@@ -5,11 +5,13 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
+import threading
 import time
 from typing import Any
 
 from fastapi import WebSocket, WebSocketDisconnect
 
+from backend.audio import stt, wake
 from backend.audio.recorder import AudioUnavailable
 from backend.audio.voice import listen_once
 from backend.brain.agent import Agent, ConfirmBroker
@@ -36,6 +38,8 @@ class Session:
         self.broker = broker
         self._send_lock = asyncio.Lock()
         self._task: asyncio.Task | None = None
+        self._wake_task: asyncio.Task | None = None
+        self._wake_stop: threading.Event | None = None
         self._proactive_job: asyncio.Task | None = None
         self._last_activity = 0.0
         self._closing = False
@@ -50,6 +54,7 @@ class Session:
     async def run(self) -> None:
         await self.websocket.accept()
         settings = self.settings_store.load()
+        self.conversation_id = self.db.get_value("last_conversation_id")
         await self.emit(
             {
                 "type": "ready",
@@ -58,6 +63,7 @@ class Session:
                     "assistant_name": settings.assistant_name,
                     "language": settings.interface.language,
                     "low_power": settings.interface.low_power,
+                    "wake_available": wake.available(settings.audio),
                 },
             }
         )
@@ -66,6 +72,8 @@ class Session:
         self._last_activity = time.monotonic()
         timer_task = asyncio.create_task(self._timer_watch())
         proactive_task = asyncio.create_task(self._proactive_watch())
+        memory_task = asyncio.create_task(self._memory_watch())
+        await self._start_wake_listening()
         try:
             while True:
                 payload = await self.websocket.receive_json()
@@ -78,7 +86,9 @@ class Session:
             self._closing = True
             timer_task.cancel()
             proactive_task.cancel()
+            memory_task.cancel()
             self._cancel_proactive_job()
+            await self._stop_wake_listening()
             self.broker.cancel_all()
 
     async def _handle(self, payload: dict[str, Any]) -> None:
@@ -96,7 +106,9 @@ class Session:
                     {"type": "error", "message": "Still working on the previous request."}
                 )
                 return
+            await self._stop_wake_listening()
             self._task = asyncio.create_task(self._run_agent(text))
+            self._task.add_done_callback(self._task_done)
             return
 
         if kind == "confirm_response":
@@ -122,10 +134,75 @@ class Session:
             if self._task and not self._task.done():
                 return
             self._cancel_proactive_job()
+            await self._stop_wake_listening()
             self._task = asyncio.create_task(self._listen())
+            self._task.add_done_callback(self._task_done)
             return
 
         await self.emit({"type": "error", "message": f"Unknown message type: {kind}"})
+
+    def _task_done(self, _task: asyncio.Task) -> None:
+        if self._closing:
+            return
+        with contextlib.suppress(RuntimeError):
+            asyncio.create_task(self._start_wake_listening())
+
+    async def _start_wake_listening(self) -> None:
+        """Start the wake-word loop only when no recording is in progress."""
+        if self._closing:
+            return
+        if self._wake_task and not self._wake_task.done():
+            return
+        if self._task and not self._task.done():
+            return
+        settings = self.settings_store.load()
+        if not wake.available(settings.audio):
+            return
+
+        stop = threading.Event()
+        self._wake_stop = stop
+        loop = asyncio.get_running_loop()
+
+        def detected() -> None:
+            if stop.is_set() or self._closing:
+                return
+            with contextlib.suppress(RuntimeError):
+                asyncio.run_coroutine_threadsafe(self._on_wake(), loop)
+
+        self._wake_task = asyncio.create_task(
+            asyncio.to_thread(wake.listen, settings.audio, stop, detected)
+        )
+        self._wake_task.add_done_callback(self._wake_done)
+
+    def _wake_done(self, task: asyncio.Task) -> None:
+        if task.cancelled():
+            return
+        error = task.exception()
+        if error:
+            logger.info("Wake-word listener stopped: %s", error)
+
+    async def _stop_wake_listening(self) -> None:
+        stop = self._wake_stop
+        task = self._wake_task
+        self._wake_stop = None
+        self._wake_task = None
+        if stop is not None:
+            stop.set()
+        if task is not None and not task.done():
+            with contextlib.suppress(asyncio.TimeoutError, asyncio.CancelledError):
+                await asyncio.wait_for(task, timeout=2)
+
+    async def _on_wake(self) -> None:
+        if self._closing:
+            return
+        if self._task and not self._task.done():
+            return
+        self._cancel_proactive_job()
+        await self._stop_wake_listening()
+        if self._task and not self._task.done():
+            return
+        self._task = asyncio.create_task(self._listen())
+        self._task.add_done_callback(self._task_done)
 
     async def _run_agent(self, text: str) -> None:
         settings = self.settings_store.load()
@@ -133,6 +210,7 @@ class Session:
         self.conversation_id = self.db.ensure_conversation(
             self.conversation_id or None, title=text[:60]
         )
+        self.db.set_value("last_conversation_id", self.conversation_id)
         self.db.add_message(self.conversation_id, "user", text)
         await self.emit(
             {
@@ -195,16 +273,46 @@ class Session:
                 loop,
             )
 
+        await self._stop_wake_listening()
         await self.emit({"type": "state", "state": "listening", "detail": ""})
         try:
-            text = await asyncio.to_thread(listen_once, settings, None, level)
-        except (AudioUnavailable, Exception) as exc:
-            await self.emit({"type": "state", "state": "idle", "detail": ""})
-            await self.emit({"type": "error", "message": f"Listening failed: {exc}"})
-            return
+            try:
+                text = await asyncio.to_thread(listen_once, settings, None, level)
+            except (AudioUnavailable, Exception) as exc:
+                await self.emit({"type": "state", "state": "idle", "detail": ""})
+                await self.emit({"type": "error", "message": f"Listening failed: {exc}"})
+                return
 
-        await self.emit({"type": "state", "state": "idle", "detail": ""})
-        await self._run_agent(text)
+            await self.emit({"type": "state", "state": "idle", "detail": ""})
+            await self._run_agent(text)
+        finally:
+            await self._start_wake_listening()
+
+    async def _memory_watch(self) -> None:
+        """Drop the speech model when free RAM falls below the configured floor."""
+        try:
+            import psutil
+        except ImportError:
+            return
+        try:
+            while True:
+                await asyncio.sleep(30)
+                settings = self.settings_store.load()
+                available_mb = int(psutil.virtual_memory().available / 1024 / 1024)
+                if available_mb >= settings.ram_floor_mb:
+                    continue
+                if self._task and not self._task.done():
+                    continue
+                await asyncio.to_thread(stt.unload)
+                logger.info(
+                    "Unloaded the speech model: %s MB available, floor is %s MB",
+                    available_mb,
+                    settings.ram_floor_mb,
+                )
+        except asyncio.CancelledError:
+            return
+        except Exception:
+            logger.exception("Memory watcher stopped")
 
     def _cancel_proactive_job(self) -> None:
         job = self._proactive_job

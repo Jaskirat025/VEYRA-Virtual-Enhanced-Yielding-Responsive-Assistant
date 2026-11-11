@@ -1,4 +1,4 @@
-export type View = "home" | "chat" | "tools" | "settings";
+export type View = "home" | "chat" | "assistant" | "tools" | "settings";
 
 export type OrbState = "idle" | "listening" | "thinking" | "speaking" | "error";
 
@@ -137,6 +137,62 @@ export interface ChatMessage {
   used_online?: boolean;
 }
 
+export interface AssistantMemory {
+  id: number;
+  title: string;
+  body: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AssistantReminder {
+  id: number;
+  label: string;
+  fire_at: string;
+  created_at: string;
+  overdue: boolean;
+}
+
+export interface AssistantHabit {
+  id: number;
+  name: string;
+  cadence: "daily" | "weekly";
+  target_per_week: number;
+  streak: number;
+  last_completed_on: string;
+  done_today: boolean;
+}
+
+export interface AssistantGoal {
+  id: number;
+  title: string;
+  target: number;
+  progress: number;
+  deadline: string;
+  status: "active" | "done";
+  updated_at: string;
+}
+
+export interface AssistantTask {
+  id: number;
+  title: string;
+  notes: string;
+  due_at: string;
+  status: "pending" | "done";
+  created_at: string;
+  completed_at: string;
+  overdue: boolean;
+}
+
+export interface AssistantSnapshot {
+  memories: AssistantMemory[];
+  reminders: AssistantReminder[];
+  habits: AssistantHabit[];
+  goals: AssistantGoal[];
+  tasks: AssistantTask[];
+  generated_at: string;
+}
+
 export interface ToolEvent {
   id: string;
   tool: string;
@@ -159,7 +215,15 @@ export interface ConfirmRequest {
 }
 
 export type WsEvent =
-  | { type: "ready"; data: { model: string; assistant_name: string; language: string } }
+  | {
+      type: "ready";
+      data: {
+        model: string;
+        assistant_name: string;
+        language: string;
+        wake_available?: boolean;
+      };
+    }
   | { type: "state"; state: OrbState; detail?: string }
   | {
       type: "transcript";

@@ -1,3 +1,4 @@
+import packageInfo from "../../package.json";
 import type { View } from "../lib/types";
 import { useI18n } from "../i18n";
 
@@ -9,6 +10,11 @@ interface SidebarProps {
 const items: { view: View; key: string; path: string }[] = [
   { view: "home", key: "nav.home", path: "M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" },
   { view: "chat", key: "nav.chat", path: "M4 4h16v12H8l-4 4z" },
+  {
+    view: "assistant",
+    key: "nav.mind",
+    path: "M12 3a4 4 0 0 0-4 4v1a4 4 0 0 0-2 7.5V17a4 4 0 0 0 6 3.5 4 4 0 0 0 6-3.5v-1.5A4 4 0 0 0 16 8V7a4 4 0 0 0-4-4z M9 10h6M9 14h6",
+  },
   {
     view: "tools",
     key: "nav.tools",
@@ -26,7 +32,7 @@ export function Sidebar({ view, onChange }: SidebarProps) {
 
   return (
     <nav
-      aria-label="Primary"
+      aria-label={t("nav.primary")}
       className="flex w-16 shrink-0 flex-col gap-1 border-r border-white/10 bg-gunmetal-900/55 py-4 xl:w-52"
     >
       {items.map((item) => {
@@ -73,7 +79,9 @@ export function Sidebar({ view, onChange }: SidebarProps) {
 
       <div className="mt-auto hidden px-5 xl:block">
         <div className="vy-hairline mb-3" />
-        <p className="vy-label leading-relaxed opacity-70">VEYRA 0.1</p>
+        <p className="vy-label leading-relaxed opacity-70">
+          VEYRA {packageInfo.version}
+        </p>
       </div>
     </nav>
   );

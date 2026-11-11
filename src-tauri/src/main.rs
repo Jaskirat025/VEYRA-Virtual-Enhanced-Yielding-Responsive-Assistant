@@ -1,13 +1,24 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod assistant;
+
+use assistant::{
+    assistant_complete_habit, assistant_complete_task, assistant_delete_goal,
+    assistant_delete_habit, assistant_delete_memory, assistant_delete_reminder,
+    assistant_delete_task, assistant_save_goal, assistant_save_habit, assistant_save_memory,
+    assistant_save_reminder, assistant_save_task, assistant_snapshot, AssistantCore,
+};
 use serde::Serialize;
 use std::{
     error::Error,
     io::{BufRead, BufReader},
-    net::{SocketAddr, TcpStream},
+    net::{SocketAddr, TcpListener, TcpStream},
     path::{Path, PathBuf},
     process::{Child, Command, Stdio},
-    sync::Mutex,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        mpsc, Mutex,
+    },
     time::{Duration, Instant},
 };
 use tauri::{Manager, State};
@@ -24,6 +35,10 @@ struct Backend {
     token: String,
     child: Mutex<Option<Child>>,
     ollama: Mutex<Option<Child>>,
+}
+
+struct ShellSettings {
+    close_to_tray: AtomicBool,
 }
 
 impl Drop for Backend {
@@ -116,6 +131,51 @@ fn backend_info(state: State<'_, Backend>) -> BackendInfo {
     }
 }
 
+#[tauri::command]
+fn set_mini_widget(app: tauri::AppHandle, visible: bool) -> Result<(), String> {
+    if let Some(window) = app.get_webview_window("mini") {
+        if visible {
+            window.show().map_err(|error| error.to_string())?;
+            let _ = window.set_focus();
+        } else {
+            window.hide().map_err(|error| error.to_string())?;
+        }
+    }
+    Ok(())
+}
+
+#[tauri::command]
+fn set_close_to_tray(state: State<'_, ShellSettings>, enabled: bool) {
+    state.close_to_tray.store(enabled, Ordering::Relaxed);
+}
+
+#[cfg(windows)]
+#[tauri::command]
+fn set_autostart(enabled: bool) -> Result<(), String> {
+    let executable = std::env::current_exe().map_err(|error| error.to_string())?;
+    let key = r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run";
+    let mut command = Command::new("reg");
+    if enabled {
+        command.args(["add", key, "/v", "Veyra", "/t", "REG_SZ", "/d"]);
+        command.arg(executable);
+        command.arg("/f");
+    } else {
+        command.args(["delete", key, "/v", "Veyra", "/f"]);
+    }
+    command.creation_flags(CREATE_NO_WINDOW);
+    let status = command.status().map_err(|error| error.to_string())?;
+    if enabled && !status.success() {
+        return Err("Windows could not register Veyra for startup.".into());
+    }
+    Ok(())
+}
+
+#[cfg(not(windows))]
+#[tauri::command]
+fn set_autostart(_enabled: bool) -> Result<(), String> {
+    Ok(())
+}
+
 fn python_command() -> Result<Command, Box<dyn Error>> {
     let executable = if cfg!(windows) { "python" } else { "python3" };
     let mut command = Command::new(executable);
@@ -126,8 +186,7 @@ fn python_command() -> Result<Command, Box<dyn Error>> {
         current
     } else if current
         .parent()
-        .map(|parent| parent.join("backend").is_dir())
-        .unwrap_or(false)
+        .is_some_and(|parent| parent.join("backend").is_dir())
     {
         current.parent().map(Path::to_path_buf).unwrap_or(current)
     } else {
@@ -200,31 +259,42 @@ fn spawn_backend(resource_dir: Option<PathBuf>) -> Result<Backend, Box<dyn Error
         .stdout
         .take()
         .ok_or("the backend produced no standard output")?;
-    let mut reader = BufReader::new(stdout);
+    let (sender, receiver) = mpsc::channel();
+    std::thread::spawn(move || {
+        let mut reader = BufReader::new(stdout);
+        for _ in 0..5 {
+            let mut line = String::new();
+            if reader.read_line(&mut line).unwrap_or(0) == 0 {
+                break;
+            }
+            let Ok(value) = serde_json::from_str::<serde_json::Value>(line.trim()) else {
+                continue;
+            };
+            if value.get("type").and_then(|kind| kind.as_str()) == Some("veyra-ready") {
+                let port = value
+                    .get("port")
+                    .and_then(|item| item.as_u64())
+                    .unwrap_or(0) as u16;
+                let token = value
+                    .get("token")
+                    .and_then(|item| item.as_str())
+                    .unwrap_or_default()
+                    .to_string();
+                let _ = sender.send(Some((port, token)));
+                return;
+            }
+        }
+        let _ = sender.send(None);
+    });
 
-    let mut port: u16 = 0;
-    let mut token = String::new();
-    for _ in 0..5 {
-        let mut line = String::new();
-        if reader.read_line(&mut line)? == 0 {
-            break;
-        }
-        let Ok(value) = serde_json::from_str::<serde_json::Value>(line.trim()) else {
-            continue;
-        };
-        if value.get("type").and_then(|kind| kind.as_str()) == Some("veyra-ready") {
-            port = value
-                .get("port")
-                .and_then(|item| item.as_u64())
-                .unwrap_or(0) as u16;
-            token = value
-                .get("token")
-                .and_then(|item| item.as_str())
-                .unwrap_or_default()
-                .to_string();
-            break;
-        }
-    }
+    let handshake = receiver
+        .recv_timeout(Duration::from_secs(30))
+        .ok()
+        .flatten();
+    let (port, token) = match handshake {
+        Some((port, token)) if port > 0 && !token.is_empty() => (port, token),
+        _ => (0, String::new()),
+    };
 
     if port == 0 || token.is_empty() {
         let _ = child.kill();
@@ -244,9 +314,48 @@ fn spawn_backend(resource_dir: Option<PathBuf>) -> Result<Backend, Box<dyn Error
 }
 
 fn main() {
+    // A second desktop process would start a second backend and a second set of
+    // tray icons. This loopback listener is kept alive for the process lifetime.
+    let _instance_guard = match TcpListener::bind(("127.0.0.1", 48231)) {
+        Ok(listener) => listener,
+        Err(_) => {
+            eprintln!("Veyra is already running.");
+            return;
+        }
+    };
+
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![backend_info])
+        .manage(ShellSettings {
+            close_to_tray: AtomicBool::new(true),
+        })
+        .invoke_handler(tauri::generate_handler![
+            backend_info,
+            set_mini_widget,
+            set_close_to_tray,
+            set_autostart,
+            assistant_snapshot,
+            assistant_save_memory,
+            assistant_delete_memory,
+            assistant_save_reminder,
+            assistant_delete_reminder,
+            assistant_save_habit,
+            assistant_complete_habit,
+            assistant_delete_habit,
+            assistant_save_goal,
+            assistant_delete_goal,
+            assistant_save_task,
+            assistant_complete_task,
+            assistant_delete_task
+        ])
         .setup(|app| {
+            let assistant_path = veyra_data_dir().join("veyra.db");
+            let assistant = AssistantCore::open(&assistant_path).map_err(|error| {
+                std::io::Error::other(format!(
+                    "could not initialise the Rust assistant core: {error}"
+                ))
+            })?;
+            app.manage(assistant);
+
             let resources = app.path().resource_dir().ok();
             let backend = match spawn_backend(resources) {
                 Ok(backend) => backend,
@@ -302,9 +411,17 @@ fn main() {
         })
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                // Closing the window keeps Veyra in the tray; quit from there.
-                api.prevent_close();
-                let _ = window.hide();
+                let close_to_tray = window
+                    .app_handle()
+                    .state::<ShellSettings>()
+                    .close_to_tray
+                    .load(Ordering::Relaxed);
+                if close_to_tray {
+                    api.prevent_close();
+                    let _ = window.hide();
+                } else {
+                    window.app_handle().exit(0);
+                }
             }
         })
         .run(tauri::generate_context!())

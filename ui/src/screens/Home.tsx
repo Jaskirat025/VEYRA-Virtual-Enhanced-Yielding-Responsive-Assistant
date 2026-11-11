@@ -72,7 +72,7 @@ export function HomeScreen() {
           />
           <Readout
             label={t("status.mode")}
-            value={health?.online_enabled ? "LOCAL + ONLINE" : t("status.local")}
+            value={health?.online_enabled ? t("status.hybrid") : t("status.local")}
           />
         </div>
 

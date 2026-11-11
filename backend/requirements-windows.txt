@@ -13,3 +13,4 @@ sounddevice>=0.4.6,<1
 faster-whisper>=1.0,<2
 openwakeword>=0.6,<1
 pyttsx3>=2.90,<3
+piper-tts>=1.2,<2

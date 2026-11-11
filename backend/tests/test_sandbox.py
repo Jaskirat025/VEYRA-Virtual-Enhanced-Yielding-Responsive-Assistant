@@ -25,3 +25,16 @@ def test_output_is_truncated():
     result = run_python("print('x' * 5000)")
     assert len(result) < 2500
     assert "truncated" in result
+
+
+def test_file_access_is_blocked():
+    result = run_python("print(open('/etc/passwd').read())")
+    assert "exit_code=1" in result
+    assert "disabled" in result.lower()
+    assert "root:" not in result
+
+
+def test_private_attributes_are_blocked():
+    result = run_python("print((1).__class__.__mro__)")
+    assert "exit_code=1" in result
+    assert "private attributes" in result.lower()

@@ -39,6 +39,15 @@ def app_data_dir() -> Path:
     return path
 
 
+def is_within(path: Path, root: Path) -> bool:
+    """Return True when ``path`` is inside ``root`` (not a sibling prefix)."""
+    try:
+        path.relative_to(root)
+    except ValueError:
+        return False
+    return True
+
+
 def config_path() -> Path:
     return app_data_dir() / "config.json"
 
@@ -55,6 +64,12 @@ def logs_dir() -> Path:
 
 def models_dir() -> Path:
     path = app_data_dir() / "models"
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def voices_dir() -> Path:
+    path = app_data_dir() / "voices"
     path.mkdir(parents=True, exist_ok=True)
     return path
 

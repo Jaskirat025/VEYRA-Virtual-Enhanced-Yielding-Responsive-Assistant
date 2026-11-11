@@ -9,6 +9,7 @@ const TOTAL_STEPS = 5;
 const JOB_LABEL_KEYS: Record<string, string> = {
   local_model: "onboarding.job.localModel",
   speech_model: "onboarding.job.speechModel",
+  voice_model: "onboarding.job.voiceModel",
 };
 
 const STATUS_KEYS: Record<BootstrapJob["status"], string> = {
@@ -297,8 +298,7 @@ export function Onboarding() {
           </h1>
           <p className="mb-5 text-sm leading-relaxed text-silver-400">{t("onboarding.micHint")}</p>
           <p className="border-l-2 border-accent px-3 py-2 text-xs text-silver-400">
-            Voice input uses the local microphone through the backend. If no device is
-            available, keep using the keyboard.
+            {t("onboarding.micNote")}
           </p>
         </div>
       )}
@@ -314,7 +314,7 @@ export function Onboarding() {
           <button
             type="button"
             className="vy-btn"
-            onClick={() => speakTest("Ciao. Sono Veyra. La voce è pronta.")}
+            onClick={() => speakTest(t("onboarding.voiceTest"))}
           >
             {t("onboarding.testVoice")}
           </button>
@@ -342,7 +342,12 @@ export function Onboarding() {
       )}
 
       <div className="mt-10 flex items-center justify-between border-t border-white/10 pt-4">
-        <button type="button" className="vy-btn h-8 px-3 text-xs" onClick={skipOnboarding}>
+        <button
+          type="button"
+          className="vy-btn h-8 px-3 text-xs"
+          disabled={!backend}
+          onClick={() => void skipOnboarding()}
+        >
           {t("onboarding.skip")}
         </button>
         {step < TOTAL_STEPS - 1 && (

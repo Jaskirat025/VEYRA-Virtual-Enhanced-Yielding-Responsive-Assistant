@@ -33,6 +33,7 @@ interface VeyraContextValue {
   error: string | null;
   level: number;
   onboarded: boolean | null;
+  wakeAvailable: boolean;
   tools: ToolInfo[];
   toolLog: ToolLogEntry[];
   send: (text: string) => void;
@@ -42,7 +43,8 @@ interface VeyraContextValue {
   saveSettings: (patch: Record<string, unknown>) => Promise<void>;
   setLanguage: (language: string) => Promise<void>;
   completeOnboarding: (name: string, language: string) => Promise<void>;
-  skipOnboarding: () => void;
+  skipOnboarding: () => Promise<void>;
+  deleteAllData: () => Promise<void>;
   refreshTools: () => Promise<void>;
   loadToolLog: () => Promise<void>;
   speakTest: (text: string) => void;
@@ -51,6 +53,23 @@ interface VeyraContextValue {
 }
 
 const VeyraContext = createContext<VeyraContextValue | null>(null);
+
+async function applyDesktopPreferences(preferences: {
+  mini_widget: boolean;
+  autostart: boolean;
+  close_to_tray: boolean;
+}) {
+  try {
+    const { invoke } = await import("@tauri-apps/api/core");
+    await Promise.all([
+      invoke("set_mini_widget", { visible: preferences.mini_widget }),
+      invoke("set_autostart", { enabled: preferences.autostart }),
+      invoke("set_close_to_tray", { enabled: preferences.close_to_tray }),
+    ]);
+  } catch {
+    // Browser preview and non-desktop builds have no Tauri commands.
+  }
+}
 
 function parseArgs(value: Record<string, unknown> | undefined): Record<string, unknown> {
   return value && typeof value === "object" ? value : {};
@@ -69,6 +88,7 @@ export function VeyraProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [level, setLevel] = useState(0);
   const [onboarded, setOnboarded] = useState<boolean | null>(null);
+  const [wakeAvailable, setWakeAvailable] = useState(false);
   const [tools, setTools] = useState<ToolInfo[]>([]);
   const [toolLog, setToolLog] = useState<ToolLogEntry[]>([]);
 
@@ -140,6 +160,7 @@ export function VeyraProvider({ children }: { children: ReactNode }) {
       switch (event.type) {
         case "ready":
           setOrbState("idle");
+          setWakeAvailable(Boolean(event.data.wake_available));
           break;
         case "state":
           setOrbState(event.state);
@@ -243,16 +264,39 @@ export function VeyraProvider({ children }: { children: ReactNode }) {
       setBackend(info);
 
       try {
-        const [settingsResponse, healthResponse, kv, toolsResponse] = await Promise.all([
-          apiFetch<{ settings: Settings }>(info, "/api/settings"),
-          apiFetch<Health>(info, "/api/health"),
-          apiFetch<{ value: string }>(info, "/api/kv/onboarded"),
-          apiFetch<{ tools: ToolInfo[] }>(info, "/api/tools"),
-        ]);
+        const [settingsResponse, healthResponse, kv, lastConversation, toolsResponse] =
+          await Promise.all([
+            apiFetch<{ settings: Settings }>(info, "/api/settings"),
+            apiFetch<Health>(info, "/api/health"),
+            apiFetch<{ value: string }>(info, "/api/kv/onboarded"),
+            apiFetch<{ value: string }>(info, "/api/kv/last_conversation_id"),
+            apiFetch<{ tools: ToolInfo[] }>(info, "/api/tools"),
+          ]);
         applySettings(settingsResponse.settings);
         setHealth(healthResponse);
         setTools(toolsResponse.tools);
         setOnboarded(kv.value === "1");
+
+        if (lastConversation.value) {
+          try {
+            const history = await apiFetch<{
+              messages: { role: string; content: string }[];
+            }>(
+              info,
+              `/api/messages?conversation_id=${encodeURIComponent(lastConversation.value)}&limit=100`,
+            );
+            setMessages(
+              history.messages
+                .filter(
+                  (message): message is { role: "user" | "assistant"; content: string } =>
+                    message.role === "user" || message.role === "assistant",
+                )
+                .map((message) => ({ role: message.role, text: message.content })),
+            );
+          } catch {
+            // A missing history is not fatal; the chat starts empty.
+          }
+        }
       } catch {
         setError(
           "The local backend is not reachable. Start Veyra from the desktop app, or run the backend in development mode.",
@@ -355,7 +399,35 @@ export function VeyraProvider({ children }: { children: ReactNode }) {
     [saveSettings],
   );
 
-  const skipOnboarding = useCallback(() => setOnboarded(true), []);
+  const skipOnboarding = useCallback(async () => {
+    setOnboarded(true);
+    const info = backendRef.current;
+    if (!info) return;
+    try {
+      await apiFetch(info, "/api/kv/onboarded", {
+        method: "PUT",
+        body: JSON.stringify({ value: "1" }),
+      });
+    } catch (cause) {
+      setError(`Onboarding could not be saved: ${(cause as Error).message}`);
+    }
+  }, []);
+
+  const deleteAllData = useCallback(async () => {
+    const info = backendRef.current;
+    if (!info) throw new Error("The local backend is not reachable.");
+    await apiFetch(info, "/api/privacy/data", { method: "DELETE" });
+    setMessages([]);
+    setToolEvents([]);
+    setToolLog([]);
+    setSettings(null);
+    setOnboarded(false);
+  }, []);
+
+  useEffect(() => {
+    if (!settings) return;
+    void applyDesktopPreferences(settings.interface);
+  }, [settings]);
 
   const refreshTools = useCallback(async () => {
     const info = backendRef.current;
@@ -397,6 +469,7 @@ export function VeyraProvider({ children }: { children: ReactNode }) {
     error,
     level,
     onboarded,
+    wakeAvailable,
     tools,
     toolLog,
     send,
@@ -407,6 +480,7 @@ export function VeyraProvider({ children }: { children: ReactNode }) {
     setLanguage,
     completeOnboarding,
     skipOnboarding,
+    deleteAllData,
     refreshTools,
     loadToolLog,
     speakTest,

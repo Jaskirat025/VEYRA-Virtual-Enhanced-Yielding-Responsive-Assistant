@@ -22,6 +22,19 @@
         "center": true,
         "decorations": false,
         "transparent": false
+      },
+      {
+        "label": "mini",
+        "title": "Veyra Mini",
+        "url": "index.html?mini=1",
+        "width": 360,
+        "height": 260,
+        "resizable": false,
+        "center": true,
+        "decorations": false,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "visible": false
       }
     ],
     "security": {

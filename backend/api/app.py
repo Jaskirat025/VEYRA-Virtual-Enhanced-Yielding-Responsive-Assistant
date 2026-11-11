@@ -6,6 +6,7 @@ import asyncio
 import logging
 import re
 import secrets as py_secrets
+import shutil
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, Query, Request, Response, WebSocket
@@ -16,13 +17,22 @@ from pydantic import BaseModel
 from backend import __version__
 from backend.api.ws import Session
 from backend.audio.stt import available as stt_available
-from backend.audio.tts import SpeechUnavailable, synthesize
+from backend.audio.tts import SpeechUnavailable, piper_available, synthesize
+from backend.audio.wake import available as wake_available
 from backend.bootstrap import BootstrapManager
 from backend.brain.agent import ConfirmBroker
 from backend.brain.llm import LLMError, fetch_ollama_models, ollama_url
 from backend.config import AppSettings, SettingsStore
 from backend.memory.db import Database
-from backend.paths import app_data_dir
+from backend.paths import (
+    app_data_dir,
+    charts_dir,
+    credentials_dir,
+    logs_dir,
+    models_dir,
+    temp_dir,
+    voices_dir,
+)
 from backend.secrets import delete_secret, get_secret, secret_status, set_secret
 from backend.tools.registry import ensure_tools_loaded
 
@@ -233,17 +243,52 @@ def create_app(
             ollama = {"ok": True, "models": models}
         except Exception as exc:
             ollama = {"ok": False, "models": [], "error": str(exc)}
+        current = settings_store.load()
         return {
             "ollama": ollama,
             "speech": stt_available(),
+            "speech_model": current.audio.stt_model,
+            "voice": piper_available(current.voice, current.interface.language),
+            "wake": wake_available(current.audio),
+            "wake_model": current.audio.wake_model_path,
             "data_dir": str(app_data_dir()),
         }
+
+    @app.delete("/api/privacy/data")
+    async def delete_user_data() -> dict[str, Any]:
+        """Delete conversations, notes, timers, logs, settings and downloaded assets.
+
+        The app stays running only until the window reloads; the caller should
+        restart it after this response.
+        """
+        current = settings_store.load()
+        db.clear_all()
+        for name in list(SECRET_NAMES) + [
+            f"{CUSTOM_API_SECRET_PREFIX}{api.id}" for api in current.custom_apis
+        ]:
+            delete_secret(name)
+        settings_store.delete()
+        for folder in (
+            models_dir(),
+            voices_dir(),
+            charts_dir(),
+            credentials_dir(),
+            temp_dir(),
+            logs_dir(),
+            app_data_dir() / "ollama",
+            app_data_dir() / "screenshots",
+        ):
+            shutil.rmtree(folder, ignore_errors=True)
+        logger.info("User data deleted at the user's request")
+        return {"deleted": True, "restart_required": True}
 
     @app.get("/api/tts")
     async def tts(text: str = Query(default="", max_length=1200)) -> Response:
         current = settings_store.load()
         try:
-            audio = await asyncio.to_thread(synthesize, text, current.voice)
+            audio = await asyncio.to_thread(
+                synthesize, text, current.voice, current.interface.language
+            )
         except SpeechUnavailable as exc:
             raise HTTPException(status_code=503, detail=str(exc)) from exc
         return Response(content=audio, media_type="audio/wav")

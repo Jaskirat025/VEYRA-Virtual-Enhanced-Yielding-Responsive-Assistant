@@ -178,6 +178,9 @@ class Agent:
     ) -> AgentResult:
         self.router.update(self.settings)
         messages = build_messages(self.settings, history or [], text)
+        personal_context = self.db.assistant_context() if self.db else ""
+        if personal_context:
+            messages.insert(2, {"role": "system", "content": personal_context})
         schemas, _tools = self._schemas(text)
 
         failures: dict[str, int] = {}
@@ -247,6 +250,10 @@ class Agent:
                         "content": result_text,
                     }
                 )
+                # External content read by one call locks risky tools for every
+                # later call in this turn, including the rest of this batch.
+                if "<dati_esterni" in result_text:
+                    external_read = True
 
             needs_escalation = (
                 any(count >= MAX_FAILURES_PER_TOOL for count in failures.values()) or steps > 3
@@ -326,6 +333,35 @@ class Agent:
 
         if not self.settings.tool_enabled(spec.name):
             return f"The tool {spec.name} is disabled in Settings.", "blocked"
+
+        if external_read and spec.risk in (Risk.CONFIRM, Risk.DANGEROUS):
+            message = (
+                f"Blocked {spec.name}: external content was read in this turn. "
+                "Ask the user to send a new message before using a risky tool."
+            )
+            self.db.log_tool_call(
+                conversation_id=conversation_id,
+                step=step,
+                tool=spec.name,
+                category=spec.category.value,
+                risk=spec.risk.value,
+                args_redacted=redact_arguments(call.arguments),
+                status="blocked",
+                duration_ms=0,
+                error=message,
+            )
+            await self.emit(
+                {
+                    "type": "tool_result",
+                    "data": {
+                        "tool": spec.name,
+                        "risk": spec.risk.value,
+                        "status": "blocked",
+                        "output": message,
+                    },
+                }
+            )
+            return message, "blocked"
 
         try:
             arguments = validate_arguments(spec, call.arguments)

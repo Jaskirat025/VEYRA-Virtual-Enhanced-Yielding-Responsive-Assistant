@@ -26,12 +26,12 @@ Windows SmartScreen may warn about an unsigned build. Until releases are code-si
 ## First-run onboarding
 
 1. **Identity and language** — assistant name and interface language.
-2. **First-run downloads** — the local model and the faster-whisper speech model start together as soon as onboarding opens. The screen shows each job, its size and progress. If one fails, retry it without restarting the other. The portable Ollama runtime is bundled with VEYRA; the model is downloaded automatically.
+2. **First-run downloads** — the local model, the faster-whisper speech model and the language-matched Piper voice start together as soon as onboarding opens. The screen shows each job, its size and progress. If one fails, retry it without restarting the others. The portable Ollama runtime is bundled with VEYRA; the model is downloaded automatically.
 3. **Microphone** — local speech input, with keyboard input always available as a fallback.
 4. **Voice** — a short local voice test.
 5. **Summary** — name, language, model and data folder.
 
-Onboarding can be skipped. Name, language, microphone and voice settings can be changed later in Settings; the two downloads continue in the background.
+Onboarding can be skipped, and the skip is remembered. Name, language, microphone, wake-word model and voice settings can be changed later in Settings; downloads continue in the background. The wake-word listener stays disabled until an openWakeWord model is selected.
 
 ## Developer prerequisites
 
@@ -76,9 +76,12 @@ npm --prefix ui run build
 | `%APPDATA%\Veyra\veyra.db` | notes, chat history, timers, tool log | kept by default |
 | `%APPDATA%\Veyra\logs\` | rotating redacted logs | kept by default |
 | `%APPDATA%\Veyra\models\` | downloaded speech models | kept by default |
+| `%APPDATA%\Veyra\voices\` | downloaded Piper voices | kept by default |
+| `%APPDATA%\Veyra\ollama\models\` | local LLM weights | kept by default |
 | Windows Credential Manager | API keys and integration tokens | removed when the user deletes them in Settings |
+| `HKCU\Software\Microsoft\Windows\CurrentVersion\Run\Veyra` | optional autostart entry | removed when autostart is disabled in Settings |
 
-Nothing is written into the installation directory. Settings → Privacy → “Delete my data” removes the Veyra folder and its credential entries after an explicit confirmation.
+Nothing is written into the installation directory. Settings → Privacy → “Delete my data” clears conversations, notes, timers, tool logs, settings, downloaded models and stored credentials after an explicit confirmation. The folder itself is kept, and the app must be restarted afterwards.
 
 ## RAM budget
 
@@ -96,7 +99,7 @@ These are design targets to be measured in the phase that introduces each compon
 Rules that keep it there:
 
 - Only one LLM is ever loaded.
-- STT and TTS load lazily and unload when idle, or when free RAM drops below `VEYRA_RAM_FLOOR_MB`.
+- The speech model loads lazily and is unloaded when free RAM drops below the floor configured in Settings → Models.
 - Context is capped at 4096 tokens.
 - Low-power mode disables WebGL, grain, and continuous animation.
 - No local vision model exists in the product.
@@ -109,11 +112,11 @@ Rules that keep it there:
 | “Local model unavailable” | bundled runtime did not start | restart VEYRA and check `%APPDATA%\Veyra\logs` |
 | Model download stalls | network or disk space | free space on the drive holding the Ollama models |
 | No audio input | microphone privacy setting | Settings → Privacy → Microphone |
-| TTS silent | voice not downloaded | download the voice in Settings → Voice |
+| TTS silent | Piper package or voice missing | reinstall the Windows requirements, then check the Piper voice path in Settings → Voice |
 | Installer blocked | unsigned build | verify checksum; do not disable SmartScreen permanently |
 | High memory use | model too large or two models loaded | switch to the 4B model, enable low-power mode |
 | Port error | another process holds the port | restart VEYRA; the port is chosen at random each start |
 
 ## Removing VEYRA
 
-The planned uninstaller removes the application and the autostart entry, and keeps `%APPDATA%\Veyra` so settings and notes survive a reinstall. To remove everything, delete that folder and the VEYRA entries in Windows Credential Manager, or use “Delete my data” in Settings before uninstalling.
+The installer removes the application and keeps `%APPDATA%\Veyra` so settings and notes survive a reinstall. Disable autostart in Settings before uninstalling so the Run entry is removed. To remove everything, use “Delete my data” in Settings and then delete the remaining Veyra folder and any VEYRA entries in Windows Credential Manager.

@@ -73,4 +73,4 @@ Right-to-left languages are not supported yet; they would require layout mirrori
 
 - The local model is multilingual; answers follow the system prompt rule “reply in the user's language”.
 - Whisper handles multiple languages, with the language hint configurable (auto-detect by default).
-- Piper needs one voice per language. Voices are downloaded on demand; the onboarding screen shows the source and license before downloading.
+- Piper needs one voice per language. The language-matched voice is downloaded during onboarding from the pinned `rhasspy/piper-voices` revision; the source and voice licence are documented in [THIRD_PARTY_LICENSES.md](../THIRD_PARTY_LICENSES.md).

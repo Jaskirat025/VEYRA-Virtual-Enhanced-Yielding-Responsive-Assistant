@@ -19,6 +19,7 @@ from typing import Any
 
 import httpx
 
+from backend.audio.tts import default_voice_path, voice_name, voice_relative_path
 from backend.brain.llm import fetch_ollama_models, ollama_url
 from backend.config import AppSettings, SettingsStore
 from backend.paths import models_dir
@@ -165,6 +166,55 @@ async def download_speech_model(job: DownloadJob, settings: AppSettings) -> None
     job.detail = "Speech model is ready."
 
 
+async def download_voice_model(job: DownloadJob, settings: AppSettings) -> None:
+    """Download the language-matched Piper voice and its config."""
+    language = settings.interface.language
+    destination = default_voice_path(language)
+    config = destination.with_suffix(destination.suffix + ".json")
+    if destination.is_file() and config.is_file():
+        job.status = "skipped"
+        job.progress = 1.0
+        job.detail = "Already installed."
+        return
+
+    name = voice_name(language)
+    relative = voice_relative_path(language)
+    base = "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0"
+    files = [
+        (f"{base}/{relative}/{name}.onnx", destination),
+        (f"{base}/{relative}/{name}.onnx.json", config),
+    ]
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    job.detail = "Downloading the Piper voice"
+    timeout = httpx.Timeout(connect=10.0, read=None, write=30.0, pool=10.0)
+
+    try:
+        async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
+            for url, target in files:
+                temporary = target.with_suffix(target.suffix + ".part")
+                async with client.stream("GET", url) as response:
+                    if response.status_code >= 400:
+                        raise RuntimeError(f"Voice download returned {response.status_code}.")
+                    length = response.headers.get("content-length")
+                    if length and length.isdigit():
+                        job.total += int(length)
+                    with temporary.open("wb") as handle:
+                        async for chunk in response.aiter_bytes():
+                            handle.write(chunk)
+                            job.downloaded += len(chunk)
+                            if job.total:
+                                job.progress = min(0.99, max(0.0, job.downloaded / job.total))
+                temporary.replace(target)
+    except (httpx.HTTPError, OSError) as exc:
+        raise RuntimeError(
+            "The voice download was interrupted. Check the connection and try again."
+        ) from exc
+
+    job.status = "done"
+    job.progress = 1.0
+    job.detail = f"{name} is ready."
+
+
 class BootstrapManager:
     """Run the first-run downloads concurrently and expose their state."""
 
@@ -177,10 +227,12 @@ class BootstrapManager:
         self._jobs = [
             DownloadJob("local_model", "Local model"),
             DownloadJob("speech_model", "Speech recognition"),
+            DownloadJob("voice_model", "Piper voice"),
         ]
         self._runners = runners or {
             "local_model": download_local_model,
             "speech_model": download_speech_model,
+            "voice_model": download_voice_model,
         }
         self._lock = asyncio.Lock()
 
